@@ -76,10 +76,17 @@ export default function ScrollStory() {
         });
 
       // ---- global page progress (both modes; drives the HUD %) ----
+      // `end` MUST be a function so it re-measures on every refresh: the 5 pins add
+      // pin-spacers that ~double the document height AFTER this trigger is created,
+      // and Task 3 will change content height again. `refreshPriority: -1` forces this
+      // to refresh AFTER the (priority-0) pins have applied their spacers, so
+      // maxScroll is the final value (a plain `end:"bottom bottom"` here measured the
+      // pre-spacer height and froze at half the story).
       ScrollTrigger.create({
-        trigger: mainRef.current,
-        start: "top top",
-        end: "bottom bottom",
+        start: 0,
+        end: () => ScrollTrigger.maxScroll(window),
+        invalidateOnRefresh: true,
+        refreshPriority: -1,
         onUpdate: (self) => {
           scrollState.pageProgress = self.progress;
         },
