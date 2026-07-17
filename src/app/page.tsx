@@ -1,17 +1,21 @@
-import { hero } from "@/content/chapters";
+import SmoothScroll from "@/components/providers/SmoothScroll";
+import Bezel from "@/components/hud/Bezel";
+import Wordmark from "@/components/hud/Wordmark";
+import ChapterNav from "@/components/hud/ChapterNav";
+import ProgressCounter from "@/components/hud/ProgressCounter";
+import ScrollStory from "@/components/ScrollStory";
 
-// Minimal proof that the content data wires up correctly. Later tasks
-// restyle this into the full pinned/scroll-driven hero chapter.
+// Composition only (server component). SmoothScroll owns the Lenis↔GSAP sync;
+// the fixed HUD (bezel, wordmark, nav, %) layers above the scroll story. Real
+// chapter content (Task 3) and the WebGL constellation (Task 4) slot in later.
 export default function Home() {
   return (
-    <main>
-      <h1>
-        {hero.headline.pre}
-        <em>{hero.headline.em}</em>
-        {hero.headline.post}
-      </h1>
-      <p>{hero.sub}</p>
-      <p>{hero.body}</p>
-    </main>
+    <SmoothScroll>
+      <Bezel />
+      <Wordmark />
+      <ChapterNav />
+      <ProgressCounter />
+      <ScrollStory />
+    </SmoothScroll>
   );
 }

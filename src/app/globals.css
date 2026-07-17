@@ -120,3 +120,43 @@ body {
 [data-theme="dark"] .grain {
   mix-blend-mode: screen;
 }
+
+/*
+ * Bezel (spec §8): fixed 12px-inset rounded frame, 1px ink-20% hairline, inverting
+ * to cream-20% when the dark act flips `[data-theme="dark"]` at the crossfade
+ * midpoint. Task 5's loader animates it in; here it is statically present.
+ */
+.bezel {
+  position: fixed;
+  inset: 12px;
+  border: 1px solid rgba(20, 20, 19, 0.2);
+  border-radius: var(--radius-card);
+  pointer-events: none;
+  z-index: 40;
+}
+
+[data-theme="dark"] .bezel {
+  border-color: rgba(250, 249, 245, 0.2);
+}
+
+/*
+ * HUD layout (spec §8): fixed, above the bezel. Wordmark top-left, chapter nav
+ * top-center, scroll-% top-right — all seated inside the 12px bezel inset.
+ */
+.hud {
+  position: fixed;
+  z-index: 50;
+}
+.hud--top {
+  top: clamp(20px, 3.2vh, 34px);
+}
+.hud--left {
+  left: clamp(20px, 3.2vw, 38px);
+}
+.hud--right {
+  right: clamp(20px, 3.2vw, 38px);
+}
+.hud--center {
+  left: 50%;
+  transform: translateX(-50%);
+}
