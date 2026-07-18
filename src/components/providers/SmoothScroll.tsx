@@ -26,9 +26,11 @@ import { ReactLenis, type LenisRef } from "lenis/react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
-// Register once. gsap.registerPlugin doesn't touch window, so this is SSR-safe even
-// though this module is bundled to the client. ScrollTrigger, SplitText, DrawSVG and
-// ScrambleText are all free (GSAP 3.13+), but only ScrollTrigger is needed this task.
+// Register once. `ScrollTrigger.register` guards its own window access, so this is
+// SSR-safe even though this module also executes during SSR. The Task-3 text plugins
+// (SplitText, ScrambleText — free since GSAP 3.13) are registered separately in
+// `lib/effects/plugins.ts` behind a `typeof window` guard, because SplitText.register
+// reads `window.innerWidth` unguarded and would crash if registered here at SSR time.
 gsap.registerPlugin(ScrollTrigger);
 
 export default function SmoothScroll({ children }: { children: React.ReactNode }) {

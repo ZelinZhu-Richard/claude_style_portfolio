@@ -67,6 +67,13 @@ export interface Chapter {
 }
 
 export interface HeroChapter extends Chapter {
+  /**
+   * The person's name — the giant display `<h1>` (spec §6 ch1: "name at
+   * clamp(96px,14vw,220px)"). Stored proper-case for a11y/SEO; the hero uppercases
+   * it visually via CSS. §5 embeds it inside `sub`; hoisting it to its own field
+   * keeps the h1 free of literals.
+   */
+  name: string;
   /** Mono meta row, e.g. "AI SAFETY × COMMUNITY · EN / 中文 · SCROLL ↓". */
   meta: string;
 }
@@ -112,6 +119,7 @@ export interface ContactChapter extends Chapter {
 
 export const hero: HeroChapter = {
   id: "hero",
+  name: "Zelin (Richard) Zhu",
   headline: { pre: "I build AI that ", em: "earns", post: " trust." },
   sub: "Zelin (Richard) Zhu — AI safety builder & researcher in Chapel Hill, North Carolina.",
   body: "Forty-eight public repositories. One rule that never changes: a human stays in the loop.",

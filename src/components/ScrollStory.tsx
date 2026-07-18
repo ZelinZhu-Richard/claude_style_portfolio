@@ -6,14 +6,21 @@
  * (via `useGSAP`, scoped to the main ref), builds:
  *
  *  - per-chapter pinned ScrollTriggers (desktop), each an empty scrubbed timeline
- *    that Task 3 hangs its content beats on, writing chapter state to `scroll-state`
+ *    that a chapter component hangs its content beats on, writing chapter state to
+ *    `scroll-state`
  *  - the background act crossfade (cream → ink → cream) over the §6 vh windows
  *  - a global page-progress trigger for the HUD %
  *  - a reduced-motion / mobile fallback with no pins (flow) but a safe color fade
  *  - pointer parallax → `scroll-state` (Task 4's useFrame reads it)
  *
- * This is the SPINE only: no canvas, no real chapter DOM, no text-effect plugins.
- * `TODO(Task N)` marks each seam where a later effect attaches.
+ * CHAPTER HANDOFF (Task 3): ScrollStory still owns section shells, pins, tracking,
+ * crossfades, and formation writes. Chapters 1–3 render real components (Hero,
+ * About, SafetyAct) that expose a `ChapterHandle` (React-19 `ref` +
+ * `useImperativeHandle`). After `document.fonts.ready` — inside the DESKTOP
+ * matchMedia context, so the work is reverted with it — ScrollStory calls each
+ * chapter's `connect(timeline)` via `context.add`, handing it the pinned scrubbed
+ * timeline; the chapter attaches its Rule A–D beats and returns a cleanup that
+ * reverts its SplitText. Chapters 4–7 render `PlaceholderChapter` (Task 3b).
  *
  * (*7 narrative sections here; §6 counts the timed Loader as chapter 0 — it is not
  * a scrolled section and lands in Task 5.)
@@ -26,6 +33,11 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { CHAPTERS, CREAM_TO_INK, INK_TO_CREAM, type ChapterDef } from "@/lib/scroll-map";
 import { scrollState, type Formation } from "@/lib/scroll-state";
 import { palette } from "@/lib/theme";
+import Hero from "@/components/chapters/Hero";
+import About from "@/components/chapters/About";
+import SafetyAct from "@/components/chapters/SafetyAct";
+import PlaceholderChapter from "@/components/chapters/PlaceholderChapter";
+import type { ChapterHandle } from "@/components/chapters/chapter-handle";
 
 type ThemeColors = { bg: string; fg: string };
 
@@ -40,10 +52,22 @@ const REDUCED = "(prefers-reduced-motion: reduce), (max-width: 768px)";
 export default function ScrollStory() {
   const mainRef = useRef<HTMLElement>(null);
 
+  // Chapter handles: ScrollStory hands each real chapter its pinned timeline after
+  // fonts settle. Chapters 4–7 have no handle (placeholders).
+  const heroRef = useRef<ChapterHandle>(null);
+  const aboutRef = useRef<ChapterHandle>(null);
+  const safetyRef = useRef<ChapterHandle>(null);
+
   useGSAP(
     () => {
       const root = document.documentElement;
       ScrollTrigger.config({ ignoreMobileResize: true }); // §9 hygiene
+
+      const chapterHandles: Record<string, React.RefObject<ChapterHandle | null>> = {
+        hero: heroRef,
+        about: aboutRef,
+        safety: safetyRef,
+      };
 
       // ---- writers: mutate the plain bridge object; zero React re-renders ----
       const setActive = (index: number, from: Formation, to: Formation) => {
@@ -55,8 +79,9 @@ export default function ScrollStory() {
         if (scrollState.chapter !== c.index) return; // only the active chapter writes
         scrollState.chapterProgress = progress;
         scrollState.morph = from === to ? 1 : progress; // →Task 4 GPU morph uProgress
-        // About: the nebula "holds its breath" — noiseAmp eases 0.15 → 0.04 (§6 ch2).
-        if (c.id === "about") scrollState.noiseAmp = gsap.utils.interpolate(0.15, 0.04, progress);
+        // NOTE: About's noiseAmp 0.15→0.04 (§6 ch2) now lives as a scrubbed tween on
+        // About's chapter timeline (About.connect), so Task 4 reads it off the same
+        // clock as the rest of that chapter's beats — no longer written here.
       };
       const paint = (from: ThemeColors, to: ThemeColors, p: number) => {
         // Single CSS-var paint = single page repaint (§9). GSAP interpolates the colors.
@@ -95,8 +120,11 @@ export default function ScrollStory() {
       const mm = gsap.matchMedia();
 
       // ============ DESKTOP: pins + scrubbed crossfade + parallax ============
-      mm.add(DESKTOP, () => {
+      mm.add(DESKTOP, (context) => {
         setActive(CHAPTERS[0].index, CHAPTERS[0].formation, CHAPTERS[0].formation);
+
+        // Pinned chapters whose scrubbed timeline a chapter component will fill.
+        const pending: Array<{ id: string; timeline: gsap.core.Timeline }> = [];
 
         CHAPTERS.forEach((c, i) => {
           const el = document.getElementById(`chapter-${c.id}`);
@@ -110,7 +138,7 @@ export default function ScrollStory() {
             // budget, so each chapter's footprint equals its vh and Σ = 1400vh
             // (TOTAL_VH). The brief's shorthand `end:"+=160%"` omits that 100vh
             // baseline and would overshoot 1400 — §6's budget is the binding value.
-            gsap.timeline({
+            const timeline = gsap.timeline({
               scrollTrigger: {
                 trigger: el,
                 start: "top top",
@@ -127,11 +155,27 @@ export default function ScrollStory() {
                 },
               },
             });
-            // TODO(Task 3): attach this chapter's scrubbed rule A/B/C beats to the timeline.
+            if (chapterHandles[c.id]) pending.push({ id: c.id, timeline });
           } else {
             // Honors (flows) + Contact (sticky-reveal): no pin, still drive state.
             trackChapter(el, c, from, to);
           }
+        });
+
+        // Hand each real chapter its pinned timeline once fonts settle (§9/§14):
+        // SplitText must run after `document.fonts.ready`. `context.add` collects the
+        // chapter's tweens/triggers into THIS matchMedia context so they revert with
+        // it; connect returns a SplitText-revert cleanup we run on teardown.
+        const cleanups: Array<() => void> = [];
+        document.fonts.ready.then(() => {
+          if (context.isReverted) return;
+          context.add(() => {
+            pending.forEach(({ id, timeline }) => {
+              const cleanup = chapterHandles[id]?.current?.connect(timeline);
+              if (cleanup) cleanups.push(cleanup);
+            });
+          });
+          ScrollTrigger.refresh();
         });
 
         // Act crossfade — scrubbed over the §6 vh windows as absolute scroll px.
@@ -171,11 +215,16 @@ export default function ScrollStory() {
           });
         };
         window.addEventListener("pointermove", onMove, { passive: true });
-        return () => window.removeEventListener("pointermove", onMove);
+        return () => {
+          cleanups.forEach((fn) => fn()); // revert chapter SplitText instances
+          window.removeEventListener("pointermove", onMove);
+        };
       });
 
       // ============ REDUCED-MOTION / MOBILE: flow, no pins, 0.4s bg fade ============
-      // Basic correct fallback (full mobile choreography is Task 7, per §10).
+      // Basic correct fallback (full mobile choreography is Task 7, per §10). Chapters
+      // render at their natural full-opacity CSS state (connect is desktop-only), so
+      // all content is statically readable.
       mm.add(REDUCED, () => {
         setActive(CHAPTERS[0].index, CHAPTERS[0].formation, CHAPTERS[0].formation);
         const els: HTMLElement[] = [];
@@ -233,24 +282,25 @@ export default function ScrollStory() {
 
   return (
     <main ref={mainRef} className="relative z-10">
-      {CHAPTERS.map((c) => {
-        const Heading = c.index === 1 ? "h1" : "h2";
-        return (
-          <section
-            key={c.id}
-            id={`chapter-${c.id}`}
-            aria-label={c.label}
-            data-chapter={c.index}
-            className="chapter relative flex min-h-screen flex-col items-center justify-center gap-4 px-8 text-center"
-          >
-            <p className="label text-xs text-[color:var(--terracotta)]">{c.actLabel}</p>
-            <Heading className="display text-[color:var(--fg)]">{c.label}</Heading>
-            <p className="label text-xs text-[color:var(--fg)] opacity-50">
-              Chapter {c.index} placeholder
-            </p>
-          </section>
-        );
-      })}
+      {CHAPTERS.map((c) => (
+        <section
+          key={c.id}
+          id={`chapter-${c.id}`}
+          aria-label={c.label}
+          data-chapter={c.index}
+          className="chapter relative min-h-screen w-full"
+        >
+          {c.id === "hero" ? (
+            <Hero ref={heroRef} />
+          ) : c.id === "about" ? (
+            <About ref={aboutRef} />
+          ) : c.id === "safety" ? (
+            <SafetyAct ref={safetyRef} chapter={c} />
+          ) : (
+            <PlaceholderChapter chapter={c} />
+          )}
+        </section>
+      ))}
     </main>
   );
 }
