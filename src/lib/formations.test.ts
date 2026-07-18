@@ -134,6 +134,13 @@ function checkFormation(fi: number, n: number, data: FormationData): void {
     let moonPts = 0;
     for (let i = 0; i < n; i++) if (data.moonId[i] >= 0) moonPts++;
     assert.ok(moonPts > 0, `${tag} has moon-tagged points`);
+    // Every within-moon edge joins two points of the SAME moon (no inter-moon lines).
+    for (let e = 0; e < edgeCount; e++) {
+      const a = data.edges[e * 2];
+      const c = data.edges[e * 2 + 1];
+      assert.ok(data.moonId[a] >= 0, `${tag} edge endpoint ${a} not on a moon`);
+      assert.equal(data.moonId[a], data.moonId[c], `${tag} inter-moon edge ${e}`);
+    }
   } else {
     assert.equal(data.orbits.length, 0, `${tag} should have no orbits`);
     for (let i = 0; i < n; i++) assert.equal(data.moonId[i], -1, `${tag} moonId[${i}] should be -1`);
@@ -146,6 +153,20 @@ for (const n of NS) {
     assert.equal(all.length, 5, "five formations");
     for (const fi of [F.NEBULA, F.LATTICE, F.GRAPH, F.MOONS, F.CALM]) {
       checkFormation(fi, n, all[fi]);
+    }
+  });
+
+  test(`formations are deterministic at N=${n}`, () => {
+    // Same seed → byte-identical buffers on every build (the CPU mirror and the
+    // node test rely on this determinism).
+    const a = buildFormations(n);
+    const b = buildFormations(n);
+    for (const fi of [F.NEBULA, F.LATTICE, F.GRAPH, F.MOONS, F.CALM]) {
+      assert.deepEqual(a[fi].positions, b[fi].positions, `positions differ @${fi}`);
+      assert.deepEqual(a[fi].edges, b[fi].edges, `edges differ @${fi}`);
+      assert.deepEqual(a[fi].accent, b[fi].accent, `accent differ @${fi}`);
+      assert.deepEqual(a[fi].stagger, b[fi].stagger, `stagger differ @${fi}`);
+      assert.deepEqual(a[fi].moonId, b[fi].moonId, `moonId differ @${fi}`);
     }
   });
 }

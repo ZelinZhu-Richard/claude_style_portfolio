@@ -302,6 +302,12 @@ export default function Constellation({ count, reduced }: { count: number; reduc
 
     // ---------- handoff on formation-pair change ----------
     if (from !== s.prevFrom || to !== s.prevTo) {
+      // `s.prevTo` still holds the formation the particles are ACTUALLY at (the
+      // mirror we're about to bake into aStart), which is what the outgoing lines
+      // must connect. Sourcing outgoing from `from` (the spec predecessor) is only
+      // correct on forward, non-skipped transitions; on reverse/skip it would flash
+      // a mismatched edge set (e.g. lattice edges over moon-positioned particles).
+      const shown = s.prevTo;
       e.aStart.set(e.mirror); // bake current interpolated positions
       e.aTarget.set(e.formations[to].positions);
       e.aStagger.set(e.formations[to].stagger);
@@ -317,11 +323,11 @@ export default function Constellation({ count, reduced }: { count: number; reduc
       e.attr.aAlpha.needsUpdate = true;
       e.attr.aMoon.needsUpdate = true;
 
-      s.outEdges = e.formations[from].edges;
+      s.outEdges = e.formations[shown].edges;
       s.inEdges = e.formations[to].edges;
       s.outCount = s.outEdges.length / 2;
       s.inCount = s.inEdges.length / 2;
-      fillEdgeAttrs(e.outEA, e.outES, e.formations[from]);
+      fillEdgeAttrs(e.outEA, e.outES, e.formations[shown]);
       fillEdgeAttrs(e.inEA, e.inES, e.formations[to]);
       e.outGeo.setDrawRange(0, s.outCount * 2);
       e.inGeo.setDrawRange(0, s.inCount * 2);
@@ -330,7 +336,7 @@ export default function Constellation({ count, reduced }: { count: number; reduc
       e.inGeo.getAttribute("aEdgeAlpha").needsUpdate = true;
       e.inGeo.getAttribute("aEdgeStagger").needsUpdate = true;
 
-      const oc = lineColors(from);
+      const oc = lineColors(shown);
       const ic = lineColors(to);
       e.outMat.uniforms.uColor.value = oc.light;
       e.outMat.uniforms.uColorDark.value = oc.dark;

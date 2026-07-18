@@ -499,11 +499,11 @@ function moons(n: number, rng: () => number): FormationData {
   d.orbits = orbits;
 
   const c0: [number, number, number] = [0, 0, 0];
-  const edges = new EdgeList(n, MOONS * scaled(350, n)); // capped 350/moon
+  const capPerMoon = scaled(350, n);
+  const edges = new EdgeList(n, MOONS * capPerMoon); // capped 350/moon
   let i = 0;
   for (let m = 0; m < MOONS; m++) {
     moonCenter(orbits[m], 0, 1, c0); // bake at t=0
-    const start = i;
     const memb: number[] = [];
     for (let j = 0; j < moonPts; j++) {
       // Fibonacci sphere point.
@@ -521,12 +521,16 @@ function moons(n: number, rng: () => number): FormationData {
       memb.push(i);
       i++;
     }
-    // Within-moon NN lines < 0.18, capped 350/moon, alpha 0.2, no inter-moon lines.
-    const perMoonCap = start + scaled(350, n);
+    // Within-moon NN lines < 0.18, capped 350 PER MOON (count this moon's own
+    // successful adds — not the running total), alpha 0.2, no inter-moon lines.
+    let addedThisMoon = 0;
     for (const p of memb) {
-      if (edges.length >= perMoonCap) break;
+      if (addedThisMoon >= capPerMoon) break;
       const near = kNearest(d.positions, memb, p, 2, 0.18);
-      for (const j of near) edges.add(p, j, 0.2, 0);
+      for (const j of near) {
+        if (edges.add(p, j, 0.2, 0)) addedThisMoon++;
+        if (addedThisMoon >= capPerMoon) break;
+      }
     }
   }
 
@@ -560,10 +564,12 @@ function calm(n: number, rng: () => number): FormationData {
     d.positions[i * 3] = (rng() - 0.5) * 8; // width 8
     d.positions[i * 3 + 1] = (rng() - 0.5) * 3 - 1.0; // height 3, shifted to lower frame
     d.positions[i * 3 + 2] = (rng() - 0.5) * 2; // depth 2
-    const accent = rng() < 0.04; // 4% ink accents
-    d.accent[i] = accent ? 1 : 0;
+    // §7: cream 50% alpha, 4% INK accents — the accents are brighter ink points,
+    // NOT terracotta, so accent stays 0 (the base colour path) and only alpha lifts.
+    const bright = rng() < 0.04;
+    d.accent[i] = 0;
     d.size[i] = 0.8; // size 0.8×
-    d.alpha[i] = accent ? 0.8 : 0.5; // cream 50% alpha
+    d.alpha[i] = bright ? 0.8 : 0.5; // cream 50% alpha, accents a touch brighter
     d.stagger[i] = rng(); // stagger hash
   }
   // No lines (spec §7 formation 5).
