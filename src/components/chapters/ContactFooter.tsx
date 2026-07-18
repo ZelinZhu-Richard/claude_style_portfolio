@@ -25,7 +25,7 @@
  * copy-on-click + olive ✓), `data-local-clock` (live America/New_York clock).
  */
 
-import { useImperativeHandle, useRef, useState } from "react";
+import { useEffect, useImperativeHandle, useRef, useState } from "react";
 import { blurIn, drawIn, rise } from "@/lib/effects";
 import { stagger } from "@/lib/motion/tokens";
 import { useLocalClock } from "@/lib/interactions";
@@ -42,16 +42,24 @@ export default function ContactFooter({ ref }: { ref?: React.Ref<ChapterHandle> 
   const headlineRef = useRef<HTMLHeadingElement>(null);
   const clockRef = useRef<HTMLSpanElement>(null);
   const [copied, setCopied] = useState(false);
+  const copyTimer = useRef<number | null>(null);
 
   // Live America/New_York clock into the `[data-local-clock]` span (§8).
   useLocalClock(clockRef);
+
+  // Clear a pending ✓-hide on unmount (avoids a setState after unmount).
+  useEffect(() => () => {
+    if (copyTimer.current) window.clearTimeout(copyTimer.current);
+  }, []);
 
   // Copy-on-click (§8): copy the address, flash an olive ✓ for 1.6s, and let the mailto
   // navigate anyway. Clipboard permission failure is swallowed — the mailto still works.
   const copyEmail = () => {
     const done = () => {
       setCopied(true);
-      window.setTimeout(() => setCopied(false), 1600);
+      // Reset the window on rapid re-clicks so ✓ always shows a full 1.6s from the last copy.
+      if (copyTimer.current) window.clearTimeout(copyTimer.current);
+      copyTimer.current = window.setTimeout(() => setCopied(false), 1600);
     };
     try {
       if (navigator.clipboard?.writeText) {

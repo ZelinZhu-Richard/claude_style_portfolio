@@ -63,7 +63,10 @@ export default function Cursor() {
     let my = 0;
     let mode: Mode = "idle";
     let magEl: HTMLElement | null = null;
-    let hidden = false; // faded out while the pointer is off-window
+    // Start hidden so nothing flashes in the top-left corner before the first move
+    // (the OS cursor is already `none`); revealed + snapped to the pointer in onMove.
+    let hidden = true;
+    gsap.set([ring, dot], { autoAlpha: 0 });
 
     const setMode = (next: Mode, el: HTMLElement | null = null) => {
       if (next === mode && el === magEl) return;
@@ -115,6 +118,9 @@ export default function Cursor() {
       my = e.clientY;
       if (hidden) {
         hidden = false;
+        // Snap both to the pointer first so the trailing ring doesn't slide in from 0,0.
+        gsap.set(ring, { x: mx - HALF, y: my - HALF });
+        gsap.set(dot, { x: mx - 4, y: my - 4 });
         gsap.to([ring, dot], { autoAlpha: 1, duration: 0.2 });
       }
     };

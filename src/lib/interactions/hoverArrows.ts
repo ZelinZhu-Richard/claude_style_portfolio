@@ -72,8 +72,9 @@ export function wireHoverArrows(root: Element, hostSelector: string): () => void
   const onOver = (ev: PointerEvent) => {
     const host = (ev.target as HTMLElement | null)?.closest?.(hostSelector);
     const from = ev.relatedTarget as HTMLElement | null;
-    // Only on the crossing INTO the host (ignore moves between the host's own children).
-    if (host && !from?.closest?.(hostSelector)) arrowIn(host);
+    // Draw when crossing INTO a host from OUTSIDE THIS host — including sweeping directly
+    // from a contiguous sibling host (mirrors onOut). Ignore moves within the same host.
+    if (host && from?.closest?.(hostSelector) !== host) arrowIn(host);
   };
   const onOut = (ev: PointerEvent) => {
     const host = (ev.target as HTMLElement | null)?.closest?.(hostSelector);
