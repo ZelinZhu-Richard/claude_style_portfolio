@@ -81,7 +81,9 @@ export default function Honors({ ref }: { ref?: React.Ref<ChapterHandle> }) {
       let ts = 1;
       const velTrigger = ScrollTrigger.create({
         onUpdate: (self) => {
-          ts = gsap.utils.clamp(-4, 4, 1 + gsap.utils.clamp(-4, 4, self.getVelocity() / 300));
+          // Symmetric clamp to [−4, 4] around the base drift; the sign flips both rows'
+          // direction-feel on upward scroll while they keep counter-scrolling.
+          ts = gsap.utils.clamp(-4, 4, 1 + self.getVelocity() / 300);
         },
       });
       const relax = () => {

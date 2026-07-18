@@ -196,12 +196,15 @@ export function PaperPlane({ accent = "currentColor", ...rest }: MotifProps) {
  * because it lays out horizontally in the reserved slot.
  */
 export function KillCriteriaDiagram({ accent = "var(--terracotta)", ...rest }: SVGProps<SVGSVGElement> & { accent?: string }) {
+  // 4 boxes W=62 + 3 gaps G=18 span 8 → 310 inside the 320 viewBox (10px right margin).
+  const W = 62;
+  const STRIDE = W + 18;
   const boxes = [
-    { x: 8, label: "hypothesize" },
-    { x: 92, label: "backtest" },
-    { x: 176, label: "referee" },
-    { x: 260, label: "kill", kill: true },
-  ];
+    { label: "hypothesize" },
+    { label: "backtest" },
+    { label: "referee" },
+    { label: "kill", kill: true },
+  ].map((b, i) => ({ ...b, x: 8 + i * STRIDE }));
   return (
     <svg
       viewBox="0 0 320 96"
@@ -220,24 +223,28 @@ export function KillCriteriaDiagram({ accent = "var(--terracotta)", ...rest }: S
           key={b.label}
           x={b.x}
           y={24}
-          width={64}
+          width={W}
           height={34}
           rx={6}
           stroke={b.kill ? accent : "currentColor"}
         />
       ))}
-      {/* arrows between boxes (shaft + head, each a stroke) */}
-      {[72, 156, 240].map((x) => (
-        <g key={x}>
-          <path d={`M${x} 41 L${x + 20} 41`} />
-          <path d={`M${x + 15} 37 L${x + 20} 41 L${x + 15} 45`} />
-        </g>
-      ))}
+      {/* arrows across each gap (shaft + head, each a stroke) */}
+      {boxes.slice(0, 3).map((b) => {
+        const from = b.x + W;
+        const to = b.x + STRIDE;
+        return (
+          <g key={`a-${b.label}`}>
+            <path d={`M${from} 41 L${to} 41`} />
+            <path d={`M${to - 5} 37 L${to} 41 L${to - 5} 45`} />
+          </g>
+        );
+      })}
       {boxes.map((b) => (
         <text
           key={`t-${b.label}`}
           data-diagram-label
-          x={b.x + 32}
+          x={b.x + W / 2}
           y={44}
           textAnchor="middle"
           fill="currentColor"

@@ -124,12 +124,12 @@ export default function About({ ref }: { ref?: React.Ref<ChapterHandle> }) {
 
   return (
     <div className="relative flex min-h-screen w-full flex-col items-center justify-center px-8 py-16 motion-safe:md:h-screen motion-safe:md:min-h-0 motion-safe:md:overflow-hidden">
-      {/* ② head-with-constellation — right-gutter margin illustration. Absolute +
-          2xl-only so it lives entirely in the gutter and never shifts the footprint
-          or overlaps the centered column. */}
+      {/* ② head-with-constellation — right-gutter margin illustration. Absolute + xl+
+          so it lives in the gutter without shifting the footprint. Verified headlessly
+          at 1280/1440 not to overlap the centered 1100px column's text. */}
       <HeadConstellation
         data-about-illo
-        className="pointer-events-none absolute right-[3vw] top-[20%] hidden h-28 w-28 text-[color:var(--fg)] opacity-50 2xl:block"
+        className="pointer-events-none absolute right-[2vw] top-[16%] hidden h-24 w-24 text-[color:var(--fg)] opacity-50 xl:block"
       />
       <div ref={contentRef} className="mx-auto flex w-full max-w-[1100px] flex-col gap-8">
         <div className="flex flex-col gap-4">

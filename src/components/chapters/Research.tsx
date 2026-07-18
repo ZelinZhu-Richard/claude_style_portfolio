@@ -91,11 +91,12 @@ export default function Research({
         data-pin-stage
         className="relative flex min-h-screen w-full flex-col justify-center px-8 py-16 text-[color:var(--fg)] motion-safe:md:h-screen motion-safe:md:min-h-0 motion-safe:md:overflow-hidden"
       >
-        {/* ⑥ winding milestone path — right-gutter margin illustration (2xl-only so it
-            stays in the gutter and never shifts the footprint). */}
+        {/* ⑥ winding milestone path — right-gutter margin illustration (xl+ so it stays
+            in the gutter without shifting the footprint). Verified headlessly at
+            1280/1440 not to overlap the centered 1100px column's text. */}
         <MilestonePath
           data-research-illo
-          className="pointer-events-none absolute right-[3vw] top-[20%] hidden h-28 w-28 text-[color:var(--fg)] opacity-50 2xl:block"
+          className="pointer-events-none absolute right-[2vw] top-[16%] hidden h-24 w-24 text-[color:var(--fg)] opacity-50 xl:block"
         />
         <div className="mx-auto flex w-full max-w-[1100px] flex-col gap-8">
           <header className="flex flex-col gap-3">

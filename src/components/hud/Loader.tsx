@@ -41,7 +41,8 @@ import { NodeBlossom } from "@/components/illustrations";
 
 const KEY = "z-loader-seen";
 const LOADER_NAME = "Zelin Zhu"; // §6 "ZELIN ZHU" (label style uppercases it)
-const MICROCOPY = (n: number) => `drawing the constellation — ${String(n).padStart(2, "0")}%`;
+// §6 counter 00→100 climbing milestones (passes 47%, the spec's example microcopy).
+const COUNTER_STEPS = ["12", "31", "47", "68", "85", "100"] as const;
 
 type Phase = "idle" | "play" | "reduced" | "gone";
 
@@ -80,9 +81,6 @@ export default function Loader() {
       const root = rootRef.current;
       if (!root) return;
 
-      // Full sequence locks scroll; reduced-motion fade does not (§6 reduced-motion).
-      if (phase === "play") lenis?.stop();
-
       let split: SplitText | undefined;
       let finished = false;
       const finish = () => {
@@ -93,54 +91,61 @@ export default function Loader() {
         setPhase("gone"); // unmount
       };
 
-      const tl = gsap.timeline({ onComplete: finish });
-
-      if (phase === "reduced") {
-        fireLoaderDone(); // hero (if it were gated) reveals during the fade
-        tl.to(root, { autoAlpha: 0, duration: 0.6, ease: "power2.out" });
-      } else {
-        const bezel = root.querySelector<SVGElement>("[data-loader-bezel]");
-        const blossom = root.querySelector<HTMLElement>("[data-loader-blossom]");
-        const name = root.querySelector<HTMLElement>("[data-loader-name]");
-        const counter = root.querySelector<HTMLElement>("[data-loader-counter]");
-
-        if (bezel) drawIn(bezel, { timeline: tl, position: 0, end: 0.6, ease: "power2.inOut" });
-        if (blossom) drawIn(blossom, { timeline: tl, position: 0.3, end: 1.1, ease: "power2.out" });
-
-        if (name) {
-          split = new SplitText(name, { type: "chars", mask: "chars" });
-          tl.from(
-            split.chars,
-            { yPercent: 120, duration: 0.7, ease: ease.reveal, stagger: 0.04 },
-            0.9,
-          );
-        }
-
-        if (counter) {
-          const proxy = { v: 0 };
-          tl.to(
-            proxy,
-            {
-              v: 100,
-              duration: 0.8,
-              ease: "none",
-              snap: { v: 1 },
-              onUpdate: () => {
-                counter.textContent = MICROCOPY(Math.round(proxy.v));
-              },
-            },
-            1.2,
-          );
-        }
-
-        // Panel wipes up, revealing the (already animating) hero beneath.
-        tl.to(root, { clipPath: "inset(0 0 100% 0)", duration: 0.6, ease: ease.cine }, 2.0);
-        // Hero handoff at exit − 0.3s.
-        tl.call(fireLoaderDone, undefined, 2.3);
-      }
-
-      // Hard timeout: never trap the user (§6 constraint).
+      // ARM THE UNLOCK BEFORE LOCKING. The 4s failsafe is registered first, so if
+      // anything in the build below throws (`new SplitText`, `drawIn`, scramble) the
+      // idempotent `finish` still fires and releases scroll — we never lock without an
+      // already-armed unlock. The try/catch also unlocks immediately on a throw.
       const timeout = window.setTimeout(finish, 4000);
+
+      try {
+        if (phase === "reduced") {
+          fireLoaderDone(); // hero (if it were gated) reveals during the fade
+          gsap.to(root, { autoAlpha: 0, duration: 0.6, ease: ease.cine, onComplete: finish });
+        } else {
+          // Full sequence locks scroll (reduced-motion fade does not, §6). Locked only
+          // AFTER the failsafe above is armed.
+          if (phase === "play") lenis?.stop();
+
+          const tl = gsap.timeline({ onComplete: finish });
+          const bezel = root.querySelector<SVGElement>("[data-loader-bezel]");
+          const blossom = root.querySelector<HTMLElement>("[data-loader-blossom]");
+          const name = root.querySelector<HTMLElement>("[data-loader-name]");
+          const num = root.querySelector<HTMLElement>("[data-loader-num]");
+
+          if (bezel) drawIn(bezel, { timeline: tl, position: 0, end: 0.6, ease: ease.reveal });
+          if (blossom) drawIn(blossom, { timeline: tl, position: 0.3, end: 1.1, ease: ease.reveal });
+
+          if (name) {
+            split = new SplitText(name, { type: "chars", mask: "chars" });
+            tl.from(
+              split.chars,
+              { yPercent: 120, duration: 0.7, ease: ease.reveal, stagger: 0.04 },
+              0.9,
+            );
+          }
+
+          if (num) {
+            // §6 counter 00→100 with ScrambleText numerals: the value climbs through
+            // milestones (count-up progression) and each transition scrambles its
+            // digits, landing on 100 exactly at 2.0s.
+            const stepDur = 0.8 / COUNTER_STEPS.length;
+            COUNTER_STEPS.forEach((val, i) =>
+              tl.to(
+                num,
+                { duration: stepDur, ease: "none", scrambleText: { text: val, chars: "0123456789", speed: 1 } },
+                1.2 + i * stepDur,
+              ),
+            );
+          }
+
+          // Panel wipes up, revealing the (already animating) hero beneath.
+          tl.to(root, { clipPath: "inset(0 0 100% 0)", duration: 0.6, ease: ease.cine }, 2.0);
+          // Hero handoff at exit − 0.3s.
+          tl.call(fireLoaderDone, undefined, 2.3);
+        }
+      } catch {
+        finish(); // any build error → release scroll + unmount immediately
+      }
 
       return () => {
         window.clearTimeout(timeout);
@@ -190,8 +195,13 @@ export default function Loader() {
           </h2>
         </div>
 
-        <p data-loader-counter className="label text-[color:var(--ink)] text-xs opacity-60">
-          {MICROCOPY(0)}
+        {/* §6 microcopy is lowercase ("drawing the constellation — 47%") — mono +
+            tracking, but NOT the `.label` uppercase transform. Only the numerals scramble. */}
+        <p
+          data-loader-counter
+          className="font-[family-name:var(--font-mono)] text-xs tracking-[0.08em] text-[color:var(--ink)] opacity-60"
+        >
+          drawing the constellation — <span data-loader-num className="tabular-nums">00</span>%
         </p>
       </div>
     </div>
