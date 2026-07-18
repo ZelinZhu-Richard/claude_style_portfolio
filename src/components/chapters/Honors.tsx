@@ -15,10 +15,14 @@
  */
 
 import { useImperativeHandle, useRef } from "react";
+import { gsap } from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { rise } from "@/lib/effects";
 import { stagger } from "@/lib/motion/tokens";
 import { honors } from "@/content/chapters";
 import type { ChapterHandle } from "./chapter-handle";
+
+const DRIFT = 40; // §6: base drift 40px/s
 
 // Two counter-scrolling rows (§6): split the honors into two halves so each marquee
 // carries distinct copy.
@@ -41,7 +45,57 @@ export default function Honors({ ref }: { ref?: React.Ref<ChapterHandle> }) {
         stagger: stagger.rows,
         scrollTrigger: { trigger: root, start: "top 80%", once: true },
       });
-      // No SplitText here — nothing to revert.
+
+      // ---- Velocity-coupled marquee (§6 ch6) ----
+      // connect runs ONLY in ScrollStory's desktop matchMedia context, so this motion
+      // is desktop-only by construction; under reduced-motion / mobile the band stays
+      // the statically-readable wrapped list (both sequences already in the DOM).
+      const scrollers = gsap.utils.toArray<HTMLElement>(root.querySelectorAll("[data-marquee-scroller]"));
+      const loops: gsap.core.Tween[] = [];
+      scrollers.forEach((scroller, rowIndex) => {
+        const kids = scroller.children;
+        const half = kids.length / 2;
+        if (half < 1) return;
+        // One period = the x-distance between a copy-1 item and its copy-2 twin, i.e.
+        // the full width of one sequence INCLUDING the inter-copy gap. Looping x by
+        // exactly this makes the wrap invisible (the two copies are identical), so the
+        // seam never jumps regardless of the flex gap.
+        const period = (kids[half] as HTMLElement).offsetLeft - (kids[0] as HTMLElement).offsetLeft;
+        if (!period) return;
+        // Row 0 drifts left (0 → −period); row 1 counter-scrolls right (−period → 0).
+        const leftward = rowIndex % 2 === 0;
+        gsap.set(scroller, { x: leftward ? 0 : -period });
+        loops.push(
+          gsap.to(scroller, {
+            x: leftward ? -period : 0,
+            duration: period / DRIFT,
+            ease: "none",
+            repeat: -1,
+          }),
+        );
+      });
+
+      // Shared timeScale: base 1, pushed by scroll velocity (clamped ±4), relaxing to
+      // 1 at ~0.05/frame. A negative timeScale reverses BOTH rows, so they keep
+      // counter-scrolling while the whole band's direction-feel flips with scroll.
+      let ts = 1;
+      const velTrigger = ScrollTrigger.create({
+        onUpdate: (self) => {
+          ts = gsap.utils.clamp(-4, 4, 1 + gsap.utils.clamp(-4, 4, self.getVelocity() / 300));
+        },
+      });
+      const relax = () => {
+        ts += (1 - ts) * 0.05; // ease back to base drift
+        loops.forEach((tw) => tw.timeScale(ts));
+      };
+      gsap.ticker.add(relax);
+
+      // gsap.ticker is not managed by ScrollStory's gsap.context — remove it here.
+      return () => {
+        gsap.ticker.remove(relax);
+        velTrigger.kill();
+        loops.forEach((tw) => tw.kill());
+      };
     },
   }));
 

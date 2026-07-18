@@ -22,10 +22,11 @@
  */
 
 import { useImperativeHandle, useRef } from "react";
-import { blurIn, rise, scramble } from "@/lib/effects";
+import { blurIn, drawIn, rise, scramble } from "@/lib/effects";
 import { community } from "@/content/chapters";
 import type { ChapterDef } from "@/lib/scroll-map";
 import type { SplitText } from "@/lib/effects/plugins";
+import { HandsLantern, NodeBlossom } from "@/components/illustrations";
 import HeadlineText from "./HeadlineText";
 import { assertNormalized, pulseAt, type ChapterHandle } from "./chapter-handle";
 
@@ -81,6 +82,14 @@ export default function Community({
         chips.forEach((chip, i) => scramble(chip, { delay: i * 0.04 }));
       });
 
+      // Cream line-work on the terracotta cards (⑤ RTP, ① Durham): draws once as the
+      // stage enters.
+      root.querySelectorAll<SVGElement>("[data-illustration-slot] svg").forEach((svg) => {
+        drawIn(svg, {
+          scrollTrigger: { trigger: pin.trigger as Element, start: "top 55%", once: true },
+        });
+      });
+
       assertNormalized(timeline, "Community");
       return () => splits.forEach((s) => s.revert());
     },
@@ -109,7 +118,7 @@ export default function Community({
 
         {/* RTP Pathway + Durham (terracotta feature cards) + Zhu Academy (compact). */}
         <div className="grid gap-4 md:grid-cols-2">
-          {community.cards.map((card) => {
+          {community.cards.map((card, i) => {
             const compact = card.compact === true;
             return (
               <article
@@ -119,14 +128,27 @@ export default function Community({
                   compact ? "p-5 md:col-span-2" : "p-6"
                 }`}
               >
-                {/* Task 5: cream line-work illustration (⑤ two hands passing a
-                    node-lantern) draws in here (DrawSVG). Reserved seam; intentionally
-                    invisible (no border/fill, zero flow footprint) until then. */}
+                {/* Cream line-work: ⑤ two hands passing a node-lantern on RTP (card 0),
+                    ① node-blossom on Durham (card 1). Absolute corner, zero flow
+                    footprint; accent forced to currentColor so the one accent path
+                    stays cream on the terracotta surface (§4). */}
                 <div
                   aria-hidden="true"
                   data-illustration-slot
                   className="pointer-events-none absolute inset-0"
-                />
+                >
+                  {i === 0 ? (
+                    <HandsLantern
+                      accent="currentColor"
+                      className="absolute bottom-3 right-3 h-20 w-20 text-[color:var(--paper)] opacity-40"
+                    />
+                  ) : i === 1 ? (
+                    <NodeBlossom
+                      accent="currentColor"
+                      className="absolute bottom-3 right-3 h-20 w-20 text-[color:var(--paper)] opacity-40"
+                    />
+                  ) : null}
+                </div>
                 <h3 className="font-[family-name:var(--font-display)] text-xl font-medium text-[color:var(--paper)]">
                   {card.title}
                 </h3>

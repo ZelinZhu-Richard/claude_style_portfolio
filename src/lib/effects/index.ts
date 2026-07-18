@@ -14,3 +14,4 @@ export { blurIn, type BlurInOptions, type BlurInHandle } from "./blurIn";
 export { wordScrub, type WordScrubOptions } from "./wordScrub";
 export { rise, type RiseOptions } from "./rise";
 export { scramble, type ScrambleOptions } from "./scramble";
+export { drawIn, type DrawInOptions } from "./drawIn";

@@ -17,11 +17,12 @@
 
 import { useImperativeHandle, useRef } from "react";
 import { gsap } from "gsap";
-import { blurIn, rise, scramble, wordScrub } from "@/lib/effects";
+import { blurIn, drawIn, rise, scramble, wordScrub } from "@/lib/effects";
 import { stagger } from "@/lib/motion/tokens";
 import { scrollState } from "@/lib/scroll-state";
 import { about } from "@/content/chapters";
 import type { SplitText } from "@/lib/effects/plugins";
+import { HeadConstellation } from "@/components/illustrations";
 import HeadlineText from "./HeadlineText";
 import { assertNormalized, pulseAt, type ChapterHandle } from "./chapter-handle";
 
@@ -83,6 +84,13 @@ export default function About({ ref }: { ref?: React.Ref<ChapterHandle> }) {
         }).split,
       );
 
+      // ② head-with-constellation: draws once in the right gutter as the stage enters.
+      const illo = (pin.trigger as Element).querySelector<SVGElement>("[data-about-illo]");
+      if (illo)
+        drawIn(illo, {
+          scrollTrigger: { trigger: pin.trigger as Element, start: "top 60%", once: true },
+        });
+
       // Rule B — body word-scrub, local 0–0.5.
       splits.push(wordScrub(timeline, body, { start: 0, end: 0.5 }));
 
@@ -116,6 +124,13 @@ export default function About({ ref }: { ref?: React.Ref<ChapterHandle> }) {
 
   return (
     <div className="relative flex min-h-screen w-full flex-col items-center justify-center px-8 py-16 motion-safe:md:h-screen motion-safe:md:min-h-0 motion-safe:md:overflow-hidden">
+      {/* ② head-with-constellation — right-gutter margin illustration. Absolute +
+          2xl-only so it lives entirely in the gutter and never shifts the footprint
+          or overlaps the centered column. */}
+      <HeadConstellation
+        data-about-illo
+        className="pointer-events-none absolute right-[3vw] top-[20%] hidden h-28 w-28 text-[color:var(--fg)] opacity-50 2xl:block"
+      />
       <div ref={contentRef} className="mx-auto flex w-full max-w-[1100px] flex-col gap-8">
         <div className="flex flex-col gap-4">
           <h2

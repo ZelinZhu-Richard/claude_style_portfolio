@@ -10,6 +10,7 @@
  */
 
 import { useLenis } from "lenis/react";
+import { NodeBlossom } from "@/components/illustrations";
 
 export default function Wordmark() {
   const lenis = useLenis();
@@ -24,8 +25,10 @@ export default function Wordmark() {
       type="button"
       onClick={toTop}
       aria-label="Scroll to top"
-      className="hud hud--top hud--left label text-[color:var(--fg)] text-base tracking-[0.08em] bg-transparent border-0 cursor-pointer"
+      className="hud hud--top hud--left label inline-flex items-center gap-2 text-[color:var(--fg)] text-base tracking-[0.08em] bg-transparent border-0 cursor-pointer"
     >
+      {/* The site mark ① — inherits --fg so it flips with the act theme. */}
+      <NodeBlossom className="h-5 w-5 text-[color:var(--fg)]" />
       Z—Z
     </button>
   );

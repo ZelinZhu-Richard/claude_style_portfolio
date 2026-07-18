@@ -100,10 +100,21 @@ body {
 .text-outline {
   color: transparent;
   -webkit-text-stroke: 1px var(--fg);
+  transition:
+    color 0.25s ease,
+    -webkit-text-stroke-color 0.25s ease;
 }
 @supports not ((-webkit-text-stroke: 1px black) or (text-stroke: 1px black)) {
   .text-outline {
     color: var(--fg);
+  }
+}
+/* Honors marquee (spec §6 ch6): a hovered item fills terracotta over 0.25s. Hover-
+   capable pointers only, so the moving band never "sticks" filled on touch. */
+@media (hover: hover) {
+  [data-honor]:hover {
+    color: var(--terracotta);
+    -webkit-text-stroke-color: var(--terracotta);
   }
 }
 

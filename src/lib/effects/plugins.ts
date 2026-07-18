@@ -20,9 +20,14 @@
 import { gsap } from "gsap";
 import { SplitText } from "gsap/SplitText";
 import { ScrambleTextPlugin } from "gsap/ScrambleTextPlugin";
+import { DrawSVGPlugin } from "gsap/DrawSVGPlugin";
 
 if (typeof window !== "undefined") {
-  gsap.registerPlugin(SplitText, ScrambleTextPlugin);
+  // DrawSVGPlugin (free since GSAP 3.13) powers Task-5's hand-drawn stroke reveals
+  // (`lib/effects/drawIn.ts`, the loader mark/bezel). Like SplitText it is registered
+  // here behind the browser guard rather than at SmoothScroll's SSR-executed module
+  // scope, so a plugin that touches `window`/SVG namespaces can never run at SSR time.
+  gsap.registerPlugin(SplitText, ScrambleTextPlugin, DrawSVGPlugin);
 }
 
-export { SplitText, ScrambleTextPlugin };
+export { SplitText, ScrambleTextPlugin, DrawSVGPlugin };

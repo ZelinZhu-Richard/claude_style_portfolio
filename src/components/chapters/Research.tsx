@@ -22,10 +22,11 @@
  */
 
 import { useImperativeHandle, useRef } from "react";
-import { blurIn, rise } from "@/lib/effects";
+import { blurIn, drawIn, rise } from "@/lib/effects";
 import { research } from "@/content/chapters";
 import type { ChapterDef } from "@/lib/scroll-map";
 import type { SplitText } from "@/lib/effects/plugins";
+import { MilestonePath } from "@/components/illustrations";
 import HeadlineText from "./HeadlineText";
 import { assertNormalized, type ChapterHandle } from "./chapter-handle";
 
@@ -64,6 +65,10 @@ export default function Research({
       const institutions = stage.querySelectorAll<HTMLElement>("[data-institution]");
       rise(institutions, { timeline, position: 0.2, end: 0.7 });
 
+      // ⑥ winding milestone path: draws once in the stage's right gutter on enter.
+      const illo = stage.querySelector<SVGElement>("[data-research-illo]");
+      if (illo) drawIn(illo, { scrollTrigger: { trigger: stage, start: "top 60%", once: true } });
+
       // Rule C — flow index rows: each rises ONCE as it enters (real-time one-shot,
       // NOT on the pinned timeline). These triggers are created inside ScrollStory's
       // desktop matchMedia context (connect runs there), so they tear down with it.
@@ -86,6 +91,12 @@ export default function Research({
         data-pin-stage
         className="relative flex min-h-screen w-full flex-col justify-center px-8 py-16 text-[color:var(--fg)] motion-safe:md:h-screen motion-safe:md:min-h-0 motion-safe:md:overflow-hidden"
       >
+        {/* ⑥ winding milestone path — right-gutter margin illustration (2xl-only so it
+            stays in the gutter and never shifts the footprint). */}
+        <MilestonePath
+          data-research-illo
+          className="pointer-events-none absolute right-[3vw] top-[20%] hidden h-28 w-28 text-[color:var(--fg)] opacity-50 2xl:block"
+        />
         <div className="mx-auto flex w-full max-w-[1100px] flex-col gap-8">
           <header className="flex flex-col gap-3">
             <span className="label text-xs text-[color:var(--terracotta)]">

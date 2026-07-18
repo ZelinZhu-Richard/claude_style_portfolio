@@ -34,6 +34,12 @@ export interface BlurInOptions {
    * break anywhere). Override only if you need a different granularity.
    */
   type?: string;
+  /**
+   * Create the reveal PAUSED (from-state applied immediately, so the target is hidden
+   * on creation) and let the caller `.play()` it later. Used by the hero name, which
+   * waits for the loader handoff (Task 5, spec §6 Ch0) instead of playing on connect.
+   */
+  paused?: boolean;
 }
 
 export interface BlurInHandle {
@@ -59,6 +65,9 @@ export function blurIn(target: Element, opts: BlurInOptions = {}): BlurInHandle 
     // blur lingers on the compositor.
     clearProps: "filter",
     scrollTrigger: opts.scrollTrigger,
+    // `from` renders its start-state immediately even when paused, so the target is
+    // hidden on creation and stays hidden until the caller plays it (hero handoff).
+    paused: opts.paused,
   });
 
   return { split, tween };

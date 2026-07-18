@@ -21,6 +21,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { SplitText } from "@/lib/effects/plugins";
 import { blurIn, rise, wordScrub } from "@/lib/effects";
 import { ease, stagger } from "@/lib/motion/tokens";
+import { onLoaderDone } from "@/lib/loader-signal";
 import { hero } from "@/content/chapters";
 import HeadlineText from "./HeadlineText";
 import { assertNormalized, type ChapterHandle } from "./chapter-handle";
@@ -46,9 +47,13 @@ export default function Hero({ ref }: { ref?: React.Ref<ChapterHandle> }) {
       // Local-progress anchor: pins timeline duration to 1 so time == local progress.
       timeline.to({ _p: 0 }, { _p: 1, duration: 1, ease: "none" }, 0);
 
-      // Rule A — name blur-in "on load". TODO(Task 5): fire this from the loader's
-      // exit seam (blur-in starts at 2.3s) instead of on connect.
-      const nameSplit = blurIn(name).split;
+      // Rule A — name blur-in, HANDED OFF from the loader (spec §6 Ch0: hero blur-in
+      // starts at loader-exit − 0.3s). Created PAUSED so the name is hidden until the
+      // loader fires `loaderDone`; on a revisit-skip the signal is already set, so
+      // `onLoaderDone` plays it immediately — exactly the old on-connect behaviour.
+      const nameReveal = blurIn(name, { paused: true });
+      const nameSplit = nameReveal.split;
+      const offLoader = onLoaderDone(() => nameReveal.tween.play());
 
       // Scrubbed name: letter-spacing 0→0.06em + y→−8vh parallax over the chapter,
       // then fades out across the last 20% (§6).
@@ -98,6 +103,7 @@ export default function Hero({ ref }: { ref?: React.Ref<ChapterHandle> }) {
 
       assertNormalized(timeline, "Hero");
       return () => {
+        offLoader();
         killGhost();
         nameSplit.revert();
         taglineSplit.revert();

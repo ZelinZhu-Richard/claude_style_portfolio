@@ -21,11 +21,12 @@
 
 import { useImperativeHandle, useRef } from "react";
 import { gsap } from "gsap";
-import { blurIn, rise, scramble, wordScrub } from "@/lib/effects";
+import { blurIn, drawIn, rise, scramble, wordScrub } from "@/lib/effects";
 import { ease } from "@/lib/motion/tokens";
 import { safety, type ProjectCard } from "@/content/chapters";
 import type { ChapterDef } from "@/lib/scroll-map";
 import type { SplitText } from "@/lib/effects/plugins";
+import { HatchedShield, HandCradle, KillCriteriaDiagram } from "@/components/illustrations";
 import HeadlineText from "./HeadlineText";
 import { assertNormalized, pulseAt, type ChapterHandle } from "./chapter-handle";
 
@@ -156,10 +157,28 @@ export default function SafetyAct({
       if (beat1) timeline.to(beat1, { y: -24, opacity: 0, ease: "none", duration: 0.04 }, 0.4);
       if (beat2) rise(beat2, { timeline, position: 0.42, end: 0.52 });
 
+      // Kill-criteria flow diagram: boxes + arrows scrub-draw 0.44–0.60, mono labels
+      // fade in just after (0.56–0.62) — the §6 beat-2 0.44–0.62 window.
+      const diagram = root.querySelector<SVGElement>("[data-killcriteria-slot] svg");
+      if (diagram) {
+        drawIn(diagram, { timeline, position: 0.44, end: 0.6 });
+        const labels = diagram.querySelectorAll<SVGElement>("[data-diagram-label]");
+        timeline.set(labels, { opacity: 0 }, 0);
+        timeline.to(labels, { opacity: 1, ease: "none", duration: 0.015, stagger: 0.015 }, 0.56);
+      }
+
       // ---- Beat 3 — thesis (0.72–1.0) ----
       if (beat2) timeline.to(beat2, { y: -24, opacity: 0, ease: "none", duration: 0.04 }, 0.72);
       if (beat3) rise(beat3, { timeline, position: 0.74, end: 0.84 });
       splits.push(wordScrub(timeline, closing, { start: 0.8, end: 0.98 }));
+
+      // ③ hatched shield wraps the constellation's negative space, scrub 0.74–0.9.
+      const shield = root.querySelector<SVGElement>("[data-shield-illo]");
+      if (shield) drawIn(shield, { timeline, position: 0.74, end: 0.9 });
+
+      // ④ hand cradling a node-star + olive check — the dark-act close, scrub 0.8–0.95.
+      const cradle = root.querySelector<SVGElement>("[data-cradle-illo]");
+      if (cradle) drawIn(cradle, { timeline, position: 0.8, end: 0.95 });
 
       // ---- Audit-log margin: tick lines in (opacity 0→0.55) at fixed progresses ----
       root.querySelectorAll<HTMLElement>("[data-log]").forEach((line) => {
@@ -245,9 +264,11 @@ export default function SafetyAct({
             className="flex flex-col gap-5 motion-safe:md:absolute motion-safe:md:inset-0 motion-safe:md:opacity-0"
           >
             <SlateCard card={quantlab} />
-            {/* Task 5: kill-criteria / referee DrawSVG diagram mounts here (scrub 0.44–0.62).
-                Reserves layout space; intentionally invisible (no border/fill) until then. */}
-            <div aria-hidden="true" data-killcriteria-slot className="h-24" />
+            {/* Kill-criteria / referee flow diagram (scrub 0.44–0.62). The h-24 slot
+                already reserves the layout space, so mounting the SVG shifts nothing. */}
+            <div aria-hidden="true" data-killcriteria-slot className="h-24 w-full">
+              <KillCriteriaDiagram className="h-full w-full text-[color:var(--fg)]" />
+            </div>
           </div>
 
           {/* Beat 3 — thesis */}
@@ -262,7 +283,12 @@ export default function SafetyAct({
             >
               <HeadlineText headline={safety.closingLine} />
             </p>
-            {/* Task 5: shield outline DrawSVG wraps the constellation here (scrub 0.74–0.9). */}
+            {/* ④ hand cradling a node-star + olive check — sits in the beat's lower
+                margin, drawn on the closing scrub (absolute → no layout shift). */}
+            <HandCradle
+              data-cradle-illo
+              className="pointer-events-none absolute bottom-0 right-1 hidden h-24 w-24 text-[color:var(--fg)] opacity-80 md:block"
+            />
           </div>
         </div>
 
@@ -271,6 +297,11 @@ export default function SafetyAct({
           {/* Task 4: the shielded-lattice constellation renders in the fixed canvas
               BEHIND the DOM; this column reserves its right-half negative space. */}
           <div aria-hidden="true" data-constellation-slot className="pointer-events-none absolute inset-0" />
+          {/* ③ hatched shield outline framing the constellation space (scrub 0.74–0.9). */}
+          <HatchedShield
+            data-shield-illo
+            className="pointer-events-none absolute left-1/2 top-1/2 h-[min(48vh,440px)] w-[min(48vh,440px)] -translate-x-1/2 -translate-y-1/2 text-[color:var(--fg)] opacity-20"
+          />
           <ul className="absolute right-0 top-0 flex flex-col gap-2 text-right">
             {AUDIT_LOG.map((line) => (
               <li

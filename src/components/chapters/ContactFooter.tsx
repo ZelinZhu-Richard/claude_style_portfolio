@@ -26,10 +26,11 @@
  */
 
 import { useImperativeHandle, useRef } from "react";
-import { blurIn, rise } from "@/lib/effects";
+import { blurIn, drawIn, rise } from "@/lib/effects";
 import { stagger } from "@/lib/motion/tokens";
 import { contact } from "@/content/chapters";
 import type { SplitText } from "@/lib/effects/plugins";
+import { PaperPlane } from "@/components/illustrations";
 import HeadlineText from "./HeadlineText";
 import { type ChapterHandle } from "./chapter-handle";
 
@@ -59,6 +60,10 @@ export default function ContactFooter({ ref }: { ref?: React.Ref<ChapterHandle> 
         scrollTrigger: { trigger: root, start: "top 75%", once: true },
       });
 
+      // ⑦ paper plane trailing orbiting nodes — draws once near the CTA on enter.
+      const illo = root.querySelector<SVGElement>("[data-contact-illo]");
+      if (illo) drawIn(illo, { scrollTrigger: { trigger: root, start: "top 70%", once: true } });
+
       return () => splits.forEach((s) => s.revert());
     },
   }));
@@ -68,6 +73,13 @@ export default function ContactFooter({ ref }: { ref?: React.Ref<ChapterHandle> 
       ref={rootRef}
       className="sticky bottom-0 flex min-h-screen w-full flex-col justify-center gap-8 bg-[color:var(--terracotta)] px-8 py-16 motion-safe:md:h-screen"
     >
+      {/* ⑦ paper plane — cream line-work in the right margin near the CTA (absolute →
+          no layout shift; lg-only so it never crowds the copy). */}
+      <PaperPlane
+        data-contact-illo
+        accent="currentColor"
+        className="pointer-events-none absolute right-[6vw] top-[30%] hidden h-32 w-32 text-[color:var(--paper)] opacity-45 lg:block"
+      />
       <div className="mx-auto flex w-full max-w-[1100px] flex-col gap-8">
         <div className="flex flex-col gap-4">
           <h2

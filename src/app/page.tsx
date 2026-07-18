@@ -4,11 +4,13 @@ import Bezel from "@/components/hud/Bezel";
 import Wordmark from "@/components/hud/Wordmark";
 import ChapterNav from "@/components/hud/ChapterNav";
 import ProgressCounter from "@/components/hud/ProgressCounter";
+import Loader from "@/components/hud/Loader";
 import ScrollStory from "@/components/ScrollStory";
 
 // Composition only (server component). SmoothScroll owns the Lenis↔GSAP sync;
 // CanvasRoot is the WebGL constellation layer at z-0 (behind the z-10 story); the
-// fixed HUD (bezel, wordmark, nav, %) layers above both.
+// fixed HUD (bezel, wordmark, nav, %) layers above both; the Loader (z above HUD +
+// grain) plays the timed entry sequence then hands off to the hero (spec §6 Ch0).
 export default function Home() {
   return (
     <SmoothScroll>
@@ -18,6 +20,7 @@ export default function Home() {
       <ChapterNav />
       <ProgressCounter />
       <ScrollStory />
+      <Loader />
     </SmoothScroll>
   );
 }
