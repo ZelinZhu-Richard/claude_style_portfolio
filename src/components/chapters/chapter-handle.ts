@@ -21,11 +21,19 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 export interface ChapterHandle {
   /**
-   * Attach this chapter's scrubbed beats + one-shots to its pinned timeline.
-   * The pinned ScrollTrigger is reachable as `timeline.scrollTrigger`.
+   * Attach this chapter's beats to the scroll spine.
+   *
+   * PINNED chapters (Hero, About, Safety, Community, Research) receive their pinned
+   * scrubbed `timeline` (its ScrollTrigger is reachable as `timeline.scrollTrigger`)
+   * and hang Rule A–D beats on it. FLOW / sticky chapters (Honors, Contact) have no
+   * pinned timeline, so ScrollStory calls `connect()` with no argument — they build
+   * only real-time one-shot reveals (Rule C rise on enter, Rule A blur-in) on their
+   * own DOM; those triggers are still created inside ScrollStory's desktop matchMedia
+   * context (connect runs there), so they tear down with it.
+   *
    * @returns optional cleanup reverting the chapter's SplitText instances.
    */
-  connect: (timeline: gsap.core.Timeline) => (() => void) | void;
+  connect: (timeline?: gsap.core.Timeline) => (() => void) | void;
 }
 
 /**

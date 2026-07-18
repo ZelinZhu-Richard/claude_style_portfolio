@@ -86,13 +86,13 @@ export default function SafetyAct({
 
   useImperativeHandle(ref, () => ({
     connect(timeline) {
-      const pin = timeline.scrollTrigger;
+      const pin = timeline?.scrollTrigger;
       const root = rootRef.current;
       const headline = headlineRef.current;
       const sub = subRef.current;
       const body = bodyRef.current;
       const closing = closingRef.current;
-      if (!pin || !root || !headline || !sub || !body || !closing) return;
+      if (!timeline || !pin || !root || !headline || !sub || !body || !closing) return;
 
       const splits: SplitText[] = [];
 

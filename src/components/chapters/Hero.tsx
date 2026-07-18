@@ -37,11 +37,11 @@ export default function Hero({ ref }: { ref?: React.Ref<ChapterHandle> }) {
 
   useImperativeHandle(ref, () => ({
     connect(timeline) {
-      const pin = timeline.scrollTrigger;
+      const pin = timeline?.scrollTrigger;
       const name = nameRef.current;
       const tagline = taglineRef.current;
       const ghost = ghostRef.current;
-      if (!pin || !name || !tagline || !ghost) return;
+      if (!timeline || !pin || !name || !tagline || !ghost) return;
 
       // Local-progress anchor: pins timeline duration to 1 so time == local progress.
       timeline.to({ _p: 0 }, { _p: 1, duration: 1, ease: "none" }, 0);

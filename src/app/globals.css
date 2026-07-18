@@ -92,6 +92,21 @@ body {
   letter-spacing: 0.08em;
 }
 
+/*
+ * Honors marquee outline type (spec §6 ch6): large display words drawn as ink
+ * outlines with a transparent fill. Uses --fg so the stroke inverts with the act
+ * theme. Falls back to a solid fill where text-stroke is unsupported (@supports).
+ */
+.text-outline {
+  color: transparent;
+  -webkit-text-stroke: 1px var(--fg);
+}
+@supports not ((-webkit-text-stroke: 1px black) or (text-stroke: 1px black)) {
+  .text-outline {
+    color: var(--fg);
+  }
+}
+
 ::selection {
   background: var(--terracotta);
   color: var(--ink);

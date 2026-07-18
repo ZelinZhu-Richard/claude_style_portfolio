@@ -14,13 +14,20 @@
  *  - pointer parallax → `scroll-state` (Task 4's useFrame reads it)
  *
  * CHAPTER HANDOFF (Task 3): ScrollStory still owns section shells, pins, tracking,
- * crossfades, and formation writes. Chapters 1–3 render real components (Hero,
- * About, SafetyAct) that expose a `ChapterHandle` (React-19 `ref` +
- * `useImperativeHandle`). After `document.fonts.ready` — inside the DESKTOP
- * matchMedia context, so the work is reverted with it — ScrollStory calls each
- * chapter's `connect(timeline)` via `context.add`, handing it the pinned scrubbed
- * timeline; the chapter attaches its Rule A–D beats and returns a cleanup that
- * reverts its SplitText. Chapters 4–7 render `PlaceholderChapter` (Task 3b).
+ * crossfades, and formation writes. All seven chapters render real components that
+ * expose a `ChapterHandle` (React-19 `ref` + `useImperativeHandle`). After
+ * `document.fonts.ready` — inside the DESKTOP matchMedia context, so the work is
+ * reverted with it — ScrollStory calls each chapter's `connect` via `context.add`.
+ * PINNED chapters (Hero, About, Safety, Community, Research) receive their pinned
+ * scrubbed timeline; FLOW / sticky chapters (Honors, Contact) receive no argument and
+ * build only on-enter one-shots. Each chapter returns a cleanup that reverts its
+ * SplitText.
+ *
+ * RESEARCH PIN SPLIT (Task 3b): Research is `pin: "partial"` (§6 "120 pin + 100
+ * flow"). ScrollStory pins only its inner `[data-pin-stage]` element (not the whole
+ * section) for the `pinVh` (120vh) portion; the sibling flow block then scrolls
+ * normally for the remaining 100vh. The two spend Research's 220vh budget, so the
+ * document total stays exactly 1400vh.
  *
  * (*7 narrative sections here; §6 counts the timed Loader as chapter 0 — it is not
  * a scrolled section and lands in Task 5.)
@@ -36,7 +43,10 @@ import { palette } from "@/lib/theme";
 import Hero from "@/components/chapters/Hero";
 import About from "@/components/chapters/About";
 import SafetyAct from "@/components/chapters/SafetyAct";
-import PlaceholderChapter from "@/components/chapters/PlaceholderChapter";
+import Community from "@/components/chapters/Community";
+import Research from "@/components/chapters/Research";
+import Honors from "@/components/chapters/Honors";
+import ContactFooter from "@/components/chapters/ContactFooter";
 import type { ChapterHandle } from "@/components/chapters/chapter-handle";
 
 type ThemeColors = { bg: string; fg: string };
@@ -52,11 +62,16 @@ const REDUCED = "(prefers-reduced-motion: reduce), (max-width: 768px)";
 export default function ScrollStory() {
   const mainRef = useRef<HTMLElement>(null);
 
-  // Chapter handles: ScrollStory hands each real chapter its pinned timeline after
-  // fonts settle. Chapters 4–7 have no handle (placeholders).
+  // Chapter handles: ScrollStory hands each real chapter its pinned timeline (pinned
+  // chapters) or calls connect() with no argument (flow / sticky chapters) after
+  // fonts settle. All seven chapters have a handle.
   const heroRef = useRef<ChapterHandle>(null);
   const aboutRef = useRef<ChapterHandle>(null);
   const safetyRef = useRef<ChapterHandle>(null);
+  const communityRef = useRef<ChapterHandle>(null);
+  const researchRef = useRef<ChapterHandle>(null);
+  const honorsRef = useRef<ChapterHandle>(null);
+  const contactRef = useRef<ChapterHandle>(null);
 
   useGSAP(
     () => {
@@ -67,6 +82,10 @@ export default function ScrollStory() {
         hero: heroRef,
         about: aboutRef,
         safety: safetyRef,
+        community: communityRef,
+        research: researchRef,
+        honors: honorsRef,
+        contact: contactRef,
       };
 
       // ---- writers: mutate the plain bridge object; zero React re-renders ----
@@ -123,27 +142,36 @@ export default function ScrollStory() {
       mm.add(DESKTOP, (context) => {
         setActive(CHAPTERS[0].index, CHAPTERS[0].formation, CHAPTERS[0].formation);
 
-        // Pinned chapters whose scrubbed timeline a chapter component will fill.
-        const pending: Array<{ id: string; timeline: gsap.core.Timeline }> = [];
+        // Chapters awaiting a `connect` after fonts settle. Pinned chapters carry
+        // their scrubbed timeline; flow / sticky chapters (Honors, Contact) carry none.
+        const connects: Array<{ id: string; timeline?: gsap.core.Timeline }> = [];
 
         CHAPTERS.forEach((c, i) => {
           const el = document.getElementById(`chapter-${c.id}`);
           if (!el) return;
           const from: Formation = i === 0 ? c.formation : CHAPTERS[i - 1].formation;
           const to = c.formation;
-          const pinned = c.pin === true || c.pin === "partial";
+          const partial = c.pin === "partial";
+          const pinned = c.pin === true || partial;
 
           if (pinned) {
-            // 100vh baseline (the pinned viewport) + (vh − 100)% pin spacer = the §6
-            // budget, so each chapter's footprint equals its vh and Σ = 1400vh
-            // (TOTAL_VH). The brief's shorthand `end:"+=160%"` omits that 100vh
-            // baseline and would overshoot 1400 — §6's budget is the binding value.
+            // For a PARTIAL pin (Research, §6 "120 pin + 100 flow"), pin only the
+            // inner `[data-pin-stage]` element for its `pinVh` portion and let the
+            // sibling flow block scroll after it. For a FULL pin, pin the whole
+            // section for its `vh`. Either way: 100vh baseline (the pinned viewport)
+            // + (footprint − 100)% pin spacer = the §6 budget, so each chapter's
+            // on-screen footprint equals its vh and Σ = 1400vh (TOTAL_VH). Research's
+            // flow block supplies the remaining (vh − pinVh) in natural document flow.
+            const pinTarget = partial
+              ? el.querySelector<HTMLElement>("[data-pin-stage]") ?? el
+              : el;
+            const pinFootprint = partial ? c.pinVh ?? c.vh : c.vh;
             const timeline = gsap.timeline({
               scrollTrigger: {
-                trigger: el,
+                trigger: pinTarget,
                 start: "top top",
-                end: `+=${c.vh - 100}%`,
-                pin: true,
+                end: `+=${pinFootprint - 100}%`,
+                pin: pinTarget,
                 scrub: c.scrub ?? true,
                 invalidateOnRefresh: true,
                 onEnter: () => setActive(c.index, from, to),
@@ -151,26 +179,28 @@ export default function ScrollStory() {
                 onUpdate: (self) => drive(c, from, to, self.progress),
                 onToggle: (self) => {
                   // will-change hygiene (§9): add on pin enter, drop on leave.
-                  el.style.willChange = self.isActive ? "transform" : "";
+                  pinTarget.style.willChange = self.isActive ? "transform" : "";
                 },
               },
             });
-            if (chapterHandles[c.id]) pending.push({ id: c.id, timeline });
+            if (chapterHandles[c.id]) connects.push({ id: c.id, timeline });
           } else {
-            // Honors (flows) + Contact (sticky-reveal): no pin, still drive state.
+            // Honors (flows) + Contact (sticky-reveal): no pin, still drive state and
+            // still receive a connect() (no timeline) so they build on-enter reveals.
             trackChapter(el, c, from, to);
+            if (chapterHandles[c.id]) connects.push({ id: c.id });
           }
         });
 
-        // Hand each real chapter its pinned timeline once fonts settle (§9/§14):
-        // SplitText must run after `document.fonts.ready`. `context.add` collects the
-        // chapter's tweens/triggers into THIS matchMedia context so they revert with
-        // it; connect returns a SplitText-revert cleanup we run on teardown.
+        // Hand each real chapter its connect once fonts settle (§9/§14): SplitText
+        // must run after `document.fonts.ready`. `context.add` collects the chapter's
+        // tweens/triggers into THIS matchMedia context so they revert with it; connect
+        // returns a SplitText-revert cleanup we run on teardown.
         const cleanups: Array<() => void> = [];
         document.fonts.ready.then(() => {
           if (context.isReverted) return;
           context.add(() => {
-            pending.forEach(({ id, timeline }) => {
+            connects.forEach(({ id, timeline }) => {
               const cleanup = chapterHandles[id]?.current?.connect(timeline);
               if (cleanup) cleanups.push(cleanup);
             });
@@ -296,8 +326,14 @@ export default function ScrollStory() {
             <About ref={aboutRef} />
           ) : c.id === "safety" ? (
             <SafetyAct ref={safetyRef} chapter={c} />
+          ) : c.id === "community" ? (
+            <Community ref={communityRef} chapter={c} />
+          ) : c.id === "research" ? (
+            <Research ref={researchRef} chapter={c} />
+          ) : c.id === "honors" ? (
+            <Honors ref={honorsRef} />
           ) : (
-            <PlaceholderChapter chapter={c} />
+            <ContactFooter ref={contactRef} />
           )}
         </section>
       ))}

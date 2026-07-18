@@ -61,11 +61,11 @@ export default function About({ ref }: { ref?: React.Ref<ChapterHandle> }) {
 
   useImperativeHandle(ref, () => ({
     connect(timeline) {
-      const pin = timeline.scrollTrigger;
+      const pin = timeline?.scrollTrigger;
       const content = contentRef.current;
       const headline = headlineRef.current;
       const body = bodyRef.current;
-      if (!pin || !content || !headline || !body) return;
+      if (!timeline || !pin || !content || !headline || !body) return;
 
       const splits: SplitText[] = [];
 
