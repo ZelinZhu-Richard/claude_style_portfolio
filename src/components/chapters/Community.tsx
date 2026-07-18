@@ -23,10 +23,11 @@
 
 import { useImperativeHandle, useRef } from "react";
 import { blurIn, drawIn, rise, scramble } from "@/lib/effects";
+import { wireHoverArrows } from "@/lib/interactions";
 import { community } from "@/content/chapters";
 import type { ChapterDef } from "@/lib/scroll-map";
 import type { SplitText } from "@/lib/effects/plugins";
-import { HandsLantern, NodeBlossom } from "@/components/illustrations";
+import { HandsLantern, HoverArrow, NodeBlossom } from "@/components/illustrations";
 import HeadlineText from "./HeadlineText";
 import { assertNormalized, pulseAt, type ChapterHandle } from "./chapter-handle";
 
@@ -90,8 +91,14 @@ export default function Community({
         });
       });
 
+      // Hover arrow (§8): draws in on hover of the two big cards, reverses on leave.
+      const unwireArrows = wireHoverArrows(root, "[data-community-card]");
+
       assertNormalized(timeline, "Community");
-      return () => splits.forEach((s) => s.revert());
+      return () => {
+        splits.forEach((s) => s.revert());
+        unwireArrows();
+      };
     },
   }));
 
@@ -149,6 +156,11 @@ export default function Community({
                     />
                   ) : null}
                 </div>
+                {/* Hover arrow (§8) on the two big cards — cream, top-right, no shift.
+                    opacity-0 by default; only desktop hover draws it in. */}
+                {!compact ? (
+                  <HoverArrow className="pointer-events-none absolute right-4 top-4 h-4 w-5 text-[color:var(--paper)] opacity-0" />
+                ) : null}
                 <h3 className="font-[family-name:var(--font-display)] text-xl font-medium text-[color:var(--paper)]">
                   {card.title}
                 </h3>

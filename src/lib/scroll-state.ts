@@ -60,6 +60,14 @@ export interface ScrollState {
    * scales 1.2×; -1 = none. A delegated `[data-project-row]` listener writes it.
    */
   highlightMoon: number;
+  /**
+   * Easter-egg spark blend (Task 6 / spec §8), 0..1. The Wordmark's 5-click egg
+   * eases this 0→1→0 over 2.5s; the constellation reads it into a shader uniform and
+   * blends every particle toward the baked SPARK glyph ON TOP of its normal morph.
+   * Because it is a separate top layer, the from→to handoff machine is never touched,
+   * so it reverts cleanly even if the user scrolls (any formation) during the 2.5s.
+   */
+  overrideSpark: number;
 }
 
 /**
@@ -78,6 +86,7 @@ export const scrollState: ScrollState = {
   pointer: { x: 0, y: 0 },
   themeBlend: 0,
   highlightMoon: -1,
+  overrideSpark: 0,
 };
 
 /**
@@ -97,4 +106,5 @@ export function resetScrollState(): void {
   scrollState.pointer.y = 0;
   scrollState.themeBlend = 0;
   scrollState.highlightMoon = -1;
+  scrollState.overrideSpark = 0;
 }

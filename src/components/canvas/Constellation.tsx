@@ -123,12 +123,16 @@ function buildEngine(N: number, reduced: boolean): Engine {
   const aSize = new Float32Array(init.size);
   const aAlpha = new Float32Array(init.alpha);
   const aMoon = Float32Array.from(init.moonId);
+  // Static easter-egg target: the baked SPARK glyph, blended in on top of the morph
+  // via uSpark (never touched by the from→to handoff). Written once, read on the GPU.
+  const aSpark = new Float32Array(formations[F.SPARK].positions);
 
   const pointGeo = new THREE.BufferGeometry();
   const attr: Record<string, THREE.BufferAttribute> = {
     position: new THREE.BufferAttribute(position, 3),
     aStart: new THREE.BufferAttribute(aStart, 3),
     aTarget: new THREE.BufferAttribute(aTarget, 3),
+    aSpark: new THREE.BufferAttribute(aSpark, 3),
     aStagger: new THREE.BufferAttribute(aStagger, 1),
     aColorT: new THREE.BufferAttribute(aColorT, 1),
     aSize: new THREE.BufferAttribute(aSize, 1),
@@ -151,6 +155,7 @@ function buildEngine(N: number, reduced: boolean): Engine {
       uCalm: { value: 0 },
       uPixelRatio: { value: 1 },
       uSizeScale: { value: 19 },
+      uSpark: { value: 0 },
       uHighlight: { value: [0, 0, 0, 0, 0] },
       uInk: { value: C_INK },
       uGlow: { value: C_GLOW },
@@ -365,6 +370,14 @@ export default function Constellation({ count, reduced }: { count: number; reduc
     e.pointsMat.uniforms.uCalm.value = to === F.CALM ? s.progress : 0;
     e.pointsMat.uniforms.uPixelRatio.value = gl.getPixelRatio();
 
+    // ---------- easter-egg spark blend (Task 6 / §8) ----------
+    // A separate top layer: the points morph toward the SPARK glyph on the GPU while
+    // the from→to machine below is untouched. Lines are faded out for the duration
+    // (they connect base positions, not spark positions) and fade back cleanly.
+    const sparkVal = reduced ? 0 : scrollState.overrideSpark;
+    e.pointsMat.uniforms.uSpark.value = sparkVal;
+    const sparkActive = sparkVal > 0.001;
+
     const tb = scrollState.themeBlend;
     e.pointsMat.uniforms.uThemeBlend.value = tb;
     e.outMat.uniforms.uThemeBlend.value = tb;
@@ -380,8 +393,10 @@ export default function Constellation({ count, reduced }: { count: number; reduc
 
     s.opacity = Math.min(1, s.opacity + dt); // ~1s fade-in on mount
     e.pointsMat.uniforms.uOpacity.value = s.opacity;
-    e.outMat.uniforms.uOpacity.value = s.opacity;
-    e.inMat.uniforms.uOpacity.value = s.opacity;
+    // Lines join base (non-spark) positions, so fade them out while the glyph forms.
+    const lineOpacity = s.opacity * (1 - sparkVal);
+    e.outMat.uniforms.uOpacity.value = lineOpacity;
+    e.inMat.uniforms.uOpacity.value = lineOpacity;
 
     // ---------- moon highlight (row hover) ----------
     for (let m = 0; m < 5; m++) {
@@ -419,7 +434,9 @@ export default function Constellation({ count, reduced }: { count: number; reduc
 
     // ---------- CPU mirror + line streaming (only while something moves) ----------
     const morphing = Math.abs(s.progress - scrollState.morph) > 1e-3;
-    const dynamic = morphing || moonsActive;
+    // Keep the mirror/line buffers current through the spark so the lines fade back
+    // onto the right base positions when the glyph dissolves.
+    const dynamic = morphing || moonsActive || sparkActive;
     if (dynamic || s.wasDynamic || s.needLineFlush) {
       const aStart = e.aStart;
       const aTarget = e.aTarget;

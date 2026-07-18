@@ -25,18 +25,52 @@
  * copy-on-click + olive ✓), `data-local-clock` (live America/New_York clock).
  */
 
-import { useImperativeHandle, useRef } from "react";
+import { useImperativeHandle, useRef, useState } from "react";
 import { blurIn, drawIn, rise } from "@/lib/effects";
 import { stagger } from "@/lib/motion/tokens";
+import { useLocalClock } from "@/lib/interactions";
 import { contact } from "@/content/chapters";
 import type { SplitText } from "@/lib/effects/plugins";
 import { PaperPlane } from "@/components/illustrations";
 import HeadlineText from "./HeadlineText";
 import { type ChapterHandle } from "./chapter-handle";
 
+const EMAIL = contact.cta.href.replace(/^mailto:/, "");
+
 export default function ContactFooter({ ref }: { ref?: React.Ref<ChapterHandle> }) {
   const rootRef = useRef<HTMLElement>(null);
   const headlineRef = useRef<HTMLHeadingElement>(null);
+  const clockRef = useRef<HTMLSpanElement>(null);
+  const [copied, setCopied] = useState(false);
+
+  // Live America/New_York clock into the `[data-local-clock]` span (§8).
+  useLocalClock(clockRef);
+
+  // Copy-on-click (§8): copy the address, flash an olive ✓ for 1.6s, and let the mailto
+  // navigate anyway. Clipboard permission failure is swallowed — the mailto still works.
+  const copyEmail = () => {
+    const done = () => {
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1600);
+    };
+    try {
+      if (navigator.clipboard?.writeText) {
+        navigator.clipboard.writeText(EMAIL).then(done, () => {}); // reject → silent
+      } else {
+        const ta = document.createElement("textarea");
+        ta.value = EMAIL;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.select();
+        const ok = document.execCommand("copy");
+        document.body.removeChild(ta);
+        if (ok) done();
+      }
+    } catch {
+      /* clipboard blocked — stay silent; the mailto navigation still happens */
+    }
+  };
 
   useImperativeHandle(ref, () => ({
     connect() {
@@ -98,17 +132,27 @@ export default function ContactFooter({ ref }: { ref?: React.Ref<ChapterHandle> 
           ) : null}
         </div>
 
-        {/* "Say hello" pill — cream bg, ink text. Task 6: `data-magnetic` drives the
-            magnetic hover; the mailto also gains copy-on-click + an olive ✓ then.
-            A plain anchor for now. */}
-        <a
-          href={contact.cta.href}
-          data-magnetic
-          data-reveal
-          className="inline-flex w-fit items-center rounded-[var(--radius-pill)] bg-[color:var(--paper)] px-8 py-4 font-[family-name:var(--font-display)] text-2xl font-medium text-[color:var(--ink)]"
-        >
-          {contact.cta.label}
-        </a>
+        {/* "Say hello" pill — cream bg, ink text. `data-magnetic` drives the magnetic
+            hover (the ring morphs to these bounds; the label counter-translates); the
+            mailto also copies the address on click and flashes an olive ✓. */}
+        <div data-reveal className="flex w-fit items-center gap-4">
+          <a
+            href={contact.cta.href}
+            data-magnetic
+            onClick={copyEmail}
+            className="inline-flex w-fit items-center rounded-[var(--radius-pill)] bg-[color:var(--paper)] px-8 py-4 font-[family-name:var(--font-display)] text-2xl font-medium text-[color:var(--ink)]"
+          >
+            <span data-magnetic-label>{contact.cta.label}</span>
+          </a>
+          <span
+            role="status"
+            aria-live="polite"
+            className="label text-xs text-[color:var(--olive)] transition-opacity duration-200"
+            style={{ opacity: copied ? 1 : 0 }}
+          >
+            {copied ? "copied ✓" : ""}
+          </span>
+        </div>
 
         {/* External links — GitHub + github.io. Task 6: underline DrawSVG on hover. */}
         <div data-reveal className="flex flex-wrap gap-x-8 gap-y-2">
@@ -132,8 +176,9 @@ export default function ContactFooter({ ref }: { ref?: React.Ref<ChapterHandle> 
         >
           <span className="label text-xs">
             {contact.meta.location} —{" "}
-            {/* Task 6: live America/New_York clock ticks here (HH:MM:SS, colon blink). */}
-            <span data-local-clock className="tabular-nums">
+            {/* Live America/New_York clock (HH:MM:SS, colon blink) — filled by
+                useLocalClock after hydration; SSR renders the placeholder. */}
+            <span ref={clockRef} data-local-clock suppressHydrationWarning className="tabular-nums">
               --:--:--
             </span>
           </span>

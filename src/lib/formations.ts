@@ -29,6 +29,13 @@ export const F = {
   GRAPH: 2,
   MOONS: 3,
   CALM: 4,
+  /**
+   * SPARK — the easter-egg glyph (Task 6, spec §8). NOT part of the scroll sequence
+   * (scroll-state's FORMATION enum stops at CALM); it is baked once into the point
+   * engine's `aSpark` attribute and blended in on top of the normal morph via a
+   * shader uniform, so it never passes through the from→to handoff machine.
+   */
+  SPARK: 5,
 } as const;
 
 /** One moon's baked orbit ellipse (spec §7 formation 4). Runtime orbiting reads these. */
@@ -577,6 +584,42 @@ function calm(n: number, rng: () => number): FormationData {
 }
 
 /* ------------------------------------------------------------------ *
+ * 6. Spark — the easter-egg 8-ray asterisk glyph (Task 6 / spec §8)
+ * ------------------------------------------------------------------ */
+
+/**
+ * An 8-ray asterisk/spark facing the camera (spec §8: "spark/asterisk glyph"). Points
+ * are distributed across the 8 rays with a dense core and thinning arms (`rad = R·u^0.55`),
+ * a little perpendicular thickness and a shallow z so it reads as a flat glyph. It carries
+ * NO edges (like calm) — the glyph is pure points. Pure math + the shared PRNG, so the
+ * node test covers it exactly like the five scroll formations.
+ */
+function spark(n: number, rng: () => number): FormationData {
+  const d = makeData(n);
+  const RAYS = 8;
+  const R = 2.6; // arm reach
+  const TWO_PI = Math.PI * 2;
+  for (let i = 0; i < n; i++) {
+    const ray = i % RAYS;
+    const ang = ray * (TWO_PI / RAYS) + (rng() - 0.5) * 0.08; // ray + slight wobble
+    const rad = R * Math.pow(rng(), 0.55); // dense core, thinning outward
+    const perp = (rng() - 0.5) * 0.1; // arm thickness (perpendicular to the ray)
+    const px = Math.cos(ang);
+    const py = Math.sin(ang);
+    d.positions[i * 3] = px * rad - py * perp;
+    d.positions[i * 3 + 1] = py * rad + px * perp;
+    d.positions[i * 3 + 2] = (rng() - 0.5) * 0.25; // shallow depth
+    const core = rad < 0.5;
+    d.accent[i] = rng() < 0.12 ? 1 : 0; // scattered terracotta sparkle
+    d.size[i] = core ? 1.6 : 1.0; // brighter, larger core
+    d.alpha[i] = core ? 0.95 : 0.8;
+    d.stagger[i] = rng(); // stagger hash → dithered form/reform
+  }
+  // No edges (spec: a glyph, not a graph).
+  return d;
+}
+
+/* ------------------------------------------------------------------ *
  * Public builder
  * ------------------------------------------------------------------ */
 
@@ -592,5 +635,6 @@ export function buildFormations(n: number): FormationData[] {
   out[F.GRAPH] = graph(n, mulberry32(SEED + 3));
   out[F.MOONS] = moons(n, mulberry32(SEED + 4));
   out[F.CALM] = calm(n, mulberry32(SEED + 5));
+  out[F.SPARK] = spark(n, mulberry32(SEED + 6));
   return out;
 }

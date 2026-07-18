@@ -5,6 +5,7 @@ import Wordmark from "@/components/hud/Wordmark";
 import ChapterNav from "@/components/hud/ChapterNav";
 import ProgressCounter from "@/components/hud/ProgressCounter";
 import Loader from "@/components/hud/Loader";
+import Cursor from "@/components/hud/Cursor";
 import ScrollStory from "@/components/ScrollStory";
 
 // Composition only (server component). SmoothScroll owns the Lenis↔GSAP sync;
@@ -21,6 +22,9 @@ export default function Home() {
       <ProgressCounter />
       <ScrollStory />
       <Loader />
+      {/* Fine-pointer + motion-safe polish layer: renders nothing (and wires nothing)
+          for coarse pointers / reduced motion. Also hosts the magnetic-CTA behaviour. */}
+      <Cursor />
     </SmoothScroll>
   );
 }

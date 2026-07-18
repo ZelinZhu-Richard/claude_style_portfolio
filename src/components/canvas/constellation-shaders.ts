@@ -13,6 +13,7 @@
 export const POINT_VERT = /* glsl */ `
 attribute vec3 aStart;
 attribute vec3 aTarget;
+attribute vec3 aSpark;
 attribute float aStagger;
 attribute float aColorT;
 attribute float aSize;
@@ -25,6 +26,7 @@ uniform float uNoiseAmp;
 uniform float uCalm;
 uniform float uPixelRatio;
 uniform float uSizeScale;
+uniform float uSpark;
 uniform float uHighlight[5];
 
 varying float vColorT;
@@ -46,6 +48,13 @@ void main() {
   // Nebula curl drift (suppressed in calm) + calm y-sine sway (spec §7 f1/f5).
   pos += curlish(pos * 0.4, uTime * 0.35) * uNoiseAmp * (1.0 - uCalm);
   pos.y += sin(uTime * 1.047 + aStagger * 6.2831) * 0.08 * uCalm;
+
+  // Easter-egg spark blend (Task 6 / spec §8): a top layer over the scroll morph, so
+  // at uSpark=1 the drift is fully overridden and every particle sits on the glyph;
+  // per-particle stagger dithers the form/reform. uSpark returns to 0 => exact scroll
+  // truth again (the from→to machine is untouched). A tiny flicker at the crest.
+  float sp = clamp(uSpark * (1.0 + aStagger * 0.25), 0.0, 1.0);
+  pos = mix(pos, aSpark, sp);
 
   float hl = 0.0;
   if (aMoon >= 0.0) {

@@ -23,10 +23,11 @@
 
 import { useImperativeHandle, useRef } from "react";
 import { blurIn, drawIn, rise } from "@/lib/effects";
+import { wireHoverArrows } from "@/lib/interactions";
 import { research } from "@/content/chapters";
 import type { ChapterDef } from "@/lib/scroll-map";
 import type { SplitText } from "@/lib/effects/plugins";
-import { MilestonePath } from "@/components/illustrations";
+import { HoverArrow, MilestonePath } from "@/components/illustrations";
 import HeadlineText from "./HeadlineText";
 import { assertNormalized, type ChapterHandle } from "./chapter-handle";
 
@@ -77,9 +78,15 @@ export default function Research({
         rise(row, { scrollTrigger: { trigger: row, start: "top 85%", once: true } });
       });
 
+      // Hover arrow (§8): a hand-drawn arrow DrawSVGs in on row hover, reverses on leave.
+      const unwireArrows = wireHoverArrows(flow, "[data-project-row]");
+
       // Only the pinned timeline must normalise to 1 (the flow rows are off-timeline).
       assertNormalized(timeline, "Research");
-      return () => splits.forEach((s) => s.revert());
+      return () => {
+        splits.forEach((s) => s.revert());
+        unwireArrows();
+      };
     },
   }));
 
@@ -154,7 +161,7 @@ export default function Research({
             // point brighten on hover); here hover is CSS-only (border warms to
             // terracotta 60%, y −4px). `data-project-row={i}` is that Task-4 seam.
             const rowClass =
-              "group flex items-baseline gap-4 border-t border-[color:var(--hairline)] py-5 transition-[transform,border-color] duration-300 hover:-translate-y-1 hover:[border-color:color-mix(in_srgb,var(--terracotta)_60%,transparent)]";
+              "group relative flex items-baseline gap-4 border-t border-[color:var(--hairline)] py-5 pr-10 transition-[transform,border-color] duration-300 hover:-translate-y-1 hover:[border-color:color-mix(in_srgb,var(--terracotta)_60%,transparent)]";
             const body = (
               <>
                 <span className="label shrink-0 text-xs text-[color:var(--fg)] opacity-40">
@@ -174,6 +181,10 @@ export default function Research({
                     </span>
                   ) : null}
                 </span>
+                {/* Hover arrow — absolute in the reserved right gutter (no layout shift).
+                    opacity-0 by default so non-hover users never see it; wired in only on
+                    desktop, where the hover tween draws it in. */}
+                <HoverArrow className="pointer-events-none absolute right-2 top-1/2 h-4 w-5 -translate-y-1/2 text-[color:var(--terracotta-hot)] opacity-0" />
               </>
             );
             return (

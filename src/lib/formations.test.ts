@@ -32,6 +32,7 @@ const BOUNDS: Record<number, { x: number; y: [number, number]; z: number }> = {
   [F.GRAPH]: { x: 6.5, y: [-3, 3], z: 6.5 }, // disc r3.4 + gaussian spread
   [F.MOONS]: { x: 4.5, y: [-2, 2], z: 4.5 }, // orbits ≤3 + spheres + dust ring 3.6
   [F.CALM]: { x: 4.05, y: [-2.55, 0.55], z: 1.05 }, // box 8×3×2, lower two-thirds
+  [F.SPARK]: { x: 2.8, y: [-2.8, 2.8], z: 0.3 }, // 8-ray asterisk R≈2.6 + thickness/depth
 };
 
 // Expected edge-count ballpark per formation as a fraction of the desktop count,
@@ -42,6 +43,7 @@ const EDGE_BALLPARK: Record<number, [number, number]> = {
   [F.GRAPH]: [2000, 3000], // spokes+NN+hublinks ~3000, capped 3000
   [F.MOONS]: [400, 1750], // within-moon ≤350/moon → ≤1750
   [F.CALM]: [0, 0], // no lines
+  [F.SPARK]: [0, 0], // glyph, no lines
 };
 
 const NAMES: Record<number, string> = {
@@ -50,7 +52,11 @@ const NAMES: Record<number, string> = {
   [F.GRAPH]: "graph",
   [F.MOONS]: "moons",
   [F.CALM]: "calm",
+  [F.SPARK]: "spark",
 };
+
+// Every formation index the suite exercises (5 scroll formations + the egg glyph).
+const ALL_FORMATIONS = [F.NEBULA, F.LATTICE, F.GRAPH, F.MOONS, F.CALM, F.SPARK];
 
 function finiteArray(a: ArrayLike<number>, label: string): void {
   for (let i = 0; i < a.length; i++) {
@@ -150,8 +156,8 @@ function checkFormation(fi: number, n: number, data: FormationData): void {
 for (const n of NS) {
   test(`formations build cleanly at N=${n}`, () => {
     const all = buildFormations(n);
-    assert.equal(all.length, 5, "five formations");
-    for (const fi of [F.NEBULA, F.LATTICE, F.GRAPH, F.MOONS, F.CALM]) {
+    assert.equal(all.length, 6, "six formations (five scroll + spark glyph)");
+    for (const fi of ALL_FORMATIONS) {
       checkFormation(fi, n, all[fi]);
     }
   });
@@ -161,7 +167,7 @@ for (const n of NS) {
     // node test rely on this determinism).
     const a = buildFormations(n);
     const b = buildFormations(n);
-    for (const fi of [F.NEBULA, F.LATTICE, F.GRAPH, F.MOONS, F.CALM]) {
+    for (const fi of ALL_FORMATIONS) {
       assert.deepEqual(a[fi].positions, b[fi].positions, `positions differ @${fi}`);
       assert.deepEqual(a[fi].edges, b[fi].edges, `edges differ @${fi}`);
       assert.deepEqual(a[fi].accent, b[fi].accent, `accent differ @${fi}`);

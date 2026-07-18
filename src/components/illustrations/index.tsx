@@ -188,6 +188,35 @@ export function PaperPlane({ accent = "currentColor", ...rest }: MotifProps) {
 }
 
 /**
+ * Hover arrow (spec §8 "hand-drawn arrow DrawSVGs in on hover"). A tiny 3-stroke
+ * right-pointing arrow — a slightly wobbly shaft + two head strokes — in `currentColor`,
+ * on a 28×24 viewBox. NOT one of the seven motifs: it is the reveal that draws on
+ * research-row / community-card hover (`lib/interactions/hoverArrows`). Its strokes match
+ * the DRAWABLE selector so DrawSVG animates them; it renders undrawn (the wiring sets
+ * `drawSVG:0`) so there is no flash before first hover.
+ */
+export function HoverArrow(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      viewBox="0 0 28 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      role="presentation"
+      data-hover-arrow
+      {...props}
+    >
+      <path d="M3 12 C10 11.4 18 12 24 12" />
+      <path d="M17 5 L24 12" />
+      <path d="M17 19 L24 12" />
+    </svg>
+  );
+}
+
+/**
  * SafetyAct kill-criteria flow diagram (§6 ch3 beat 2, scrub 0.44–0.62). NOT one of
  * the seven motifs — a bespoke four-box flow (hypothesize → backtest → referee →
  * kill) built from the same confident strokes, with 8px mono labels. The "kill" box
