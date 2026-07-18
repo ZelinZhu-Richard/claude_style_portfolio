@@ -23,7 +23,7 @@ import { blurIn, rise, wordScrub } from "@/lib/effects";
 import { ease, stagger } from "@/lib/motion/tokens";
 import { hero } from "@/content/chapters";
 import HeadlineText from "./HeadlineText";
-import type { ChapterHandle } from "./chapter-handle";
+import { assertNormalized, type ChapterHandle } from "./chapter-handle";
 
 // Component-local decoration (not narrative copy) — the brief permits mono/label
 // motifs as local constants. The Task-5 loader will hand the hero its intro.
@@ -96,6 +96,7 @@ export default function Hero({ ref }: { ref?: React.Ref<ChapterHandle> }) {
       // start the loop directly when the hero is the on-screen chapter (page top).
       if (window.scrollY < window.innerHeight) makeGhost();
 
+      assertNormalized(timeline, "Hero");
       return () => {
         killGhost();
         nameSplit.revert();

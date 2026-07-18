@@ -31,6 +31,9 @@ export interface ScrambleOptions {
 
 export function scramble(target: Element, opts: ScrambleOptions = {}): gsap.core.Tween {
   const text = opts.text ?? target.textContent ?? "";
+  // Derive the scramble pool from the final text so lowercase labels (stat captions)
+  // don't flicker in uppercase and uppercase chips (LOW/MED/HIGH, BLOCKED) stay caps.
+  const chars = opts.chars ?? (/[a-z]/.test(text) ? "lowerCase" : "upperCase");
   return gsap.to(target, {
     duration: opts.duration ?? durations.reveal,
     ease: "none",
@@ -38,7 +41,7 @@ export function scramble(target: Element, opts: ScrambleOptions = {}): gsap.core
     scrollTrigger: opts.scrollTrigger,
     scrambleText: {
       text,
-      chars: opts.chars ?? "upperCase",
+      chars,
       speed: 1,
     },
   });

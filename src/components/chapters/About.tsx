@@ -23,7 +23,7 @@ import { scrollState } from "@/lib/scroll-state";
 import { about } from "@/content/chapters";
 import type { SplitText } from "@/lib/effects/plugins";
 import HeadlineText from "./HeadlineText";
-import { pulseAt, type ChapterHandle } from "./chapter-handle";
+import { assertNormalized, pulseAt, type ChapterHandle } from "./chapter-handle";
 
 /**
  * Count a numeral up from zero to its final displayed value, preserving any
@@ -86,13 +86,13 @@ export default function About({ ref }: { ref?: React.Ref<ChapterHandle> }) {
       // Rule B — body word-scrub, local 0–0.5.
       splits.push(wordScrub(timeline, body, { start: 0, end: 0.5 }));
 
-      // Rule C — stat tiles rise, local 0.45–0.8, staggered.
+      // Rule C — stat tiles rise, scrubbed across local 0.45–0.8 (fits the window).
       const tiles = content.querySelectorAll<HTMLElement>("[data-stat]");
-      rise(tiles, { timeline, position: 0.45, stagger: stagger.cards });
+      rise(tiles, { timeline, position: 0.45, end: 0.8 });
 
       // Rule C — Education + Anthropic Academy cards rise, local 0.6–0.85.
       const cards = content.querySelectorAll<HTMLElement>("[data-about-card]");
-      rise(cards, { timeline, position: 0.6, stagger: stagger.cards });
+      rise(cards, { timeline, position: 0.6, end: 0.85 });
 
       // Numerals count up ONCE + labels Rule D scramble, fired by a non-scrub point
       // trigger when the grid first reveals (local 0.45).
@@ -109,6 +109,7 @@ export default function About({ ref }: { ref?: React.Ref<ChapterHandle> }) {
       // Everything fades out into the dark crossfade, local 0.9–1.0.
       timeline.to(content, { opacity: 0, y: -20, ease: "none", duration: 0.1 }, 0.9);
 
+      assertNormalized(timeline, "About");
       return () => splits.forEach((s) => s.revert());
     },
   }));

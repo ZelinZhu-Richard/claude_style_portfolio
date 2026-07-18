@@ -27,7 +27,7 @@ import { safety, type ProjectCard } from "@/content/chapters";
 import type { ChapterDef } from "@/lib/scroll-map";
 import type { SplitText } from "@/lib/effects/plugins";
 import HeadlineText from "./HeadlineText";
-import { pulseAt, type ChapterHandle } from "./chapter-handle";
+import { assertNormalized, pulseAt, type ChapterHandle } from "./chapter-handle";
 
 // Component-local mono decorations (not narrative copy — the brief permits these as
 // local constants). The risk levels, the mock tool-call, and the audit-log motif.
@@ -110,7 +110,7 @@ export default function SafetyAct({
       splits.push(wordScrub(timeline, sub, { start: 0.08, end: 0.2 }));
       splits.push(wordScrub(timeline, body, { start: 0.14, end: 0.34 }));
       const scutumCard = root.querySelector<HTMLElement>('[data-beat="1"] [data-beat-card]');
-      if (scutumCard) rise(scutumCard, { timeline, position: 0.12 });
+      if (scutumCard) rise(scutumCard, { timeline, position: 0.12, end: 0.3 });
 
       // Risk chips Rule D at 0.18 / 0.22 / 0.26.
       const chips = root.querySelectorAll<HTMLElement>("[data-risk-chip]");
@@ -154,11 +154,11 @@ export default function SafetyAct({
       const beat2 = root.querySelector<HTMLElement>('[data-beat="2"]');
       const beat3 = root.querySelector<HTMLElement>('[data-beat="3"]');
       if (beat1) timeline.to(beat1, { y: -24, opacity: 0, ease: "none", duration: 0.04 }, 0.4);
-      if (beat2) rise(beat2, { timeline, position: 0.42 });
+      if (beat2) rise(beat2, { timeline, position: 0.42, end: 0.52 });
 
       // ---- Beat 3 — thesis (0.72–1.0) ----
       if (beat2) timeline.to(beat2, { y: -24, opacity: 0, ease: "none", duration: 0.04 }, 0.72);
-      if (beat3) rise(beat3, { timeline, position: 0.74 });
+      if (beat3) rise(beat3, { timeline, position: 0.74, end: 0.84 });
       splits.push(wordScrub(timeline, closing, { start: 0.8, end: 0.98 }));
 
       // ---- Audit-log margin: tick lines in (opacity 0→0.55) at fixed progresses ----
@@ -168,6 +168,7 @@ export default function SafetyAct({
         timeline.to(line, { opacity: 0.55, ease: "none", duration: 0.03 }, at);
       });
 
+      assertNormalized(timeline, "Safety");
       return () => splits.forEach((s) => s.revert());
     },
   }));
@@ -210,7 +211,7 @@ export default function SafetyAct({
                 <span
                   key={risk}
                   data-risk-chip
-                  className="label rounded-[var(--radius-chip)] border border-[color:var(--hairline)] px-2.5 py-1 text-[0.65rem] text-[color:var(--fg)]"
+                  className="label rounded-[var(--radius-chip)] border border-[color:var(--hairline)] px-2.5 py-1 text-[0.65rem] text-[color:var(--fg)] motion-safe:md:opacity-0"
                 >
                   {risk}
                 </span>
@@ -225,12 +226,12 @@ export default function SafetyAct({
                 <span
                   data-strike
                   aria-hidden="true"
-                  className="absolute left-0 top-1/2 h-px w-full bg-[color:var(--terracotta)]"
+                  className="absolute left-0 top-1/2 h-px w-full origin-left bg-[color:var(--terracotta)] motion-safe:md:scale-x-0"
                 />
               </span>
               <span
                 data-blocked
-                className="label rounded-[var(--radius-chip)] bg-[color:var(--terracotta)] px-2.5 py-1 text-[0.65rem] text-[color:var(--paper)]"
+                className="label rounded-[var(--radius-chip)] bg-[color:var(--terracotta)] px-2.5 py-1 text-[0.65rem] text-[color:var(--paper)] motion-safe:md:opacity-0"
               >
                 {BLOCKED_LABEL}
               </span>
@@ -278,7 +279,12 @@ export default function SafetyAct({
                 className="label text-[0.6rem] leading-relaxed text-[color:var(--fg)] opacity-[0.55]"
               >
                 {line.text}
-                {line.ok ? <span className="text-[color:var(--olive)]"> ✓</span> : null}
+                {line.ok ? (
+                  <span aria-hidden="true" className="text-[color:var(--olive)]">
+                    {" "}
+                    ✓
+                  </span>
+                ) : null}
               </li>
             ))}
           </ul>

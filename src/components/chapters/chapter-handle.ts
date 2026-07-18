@@ -56,3 +56,19 @@ export function pulseAt(
     onLeaveBack: reset,
   });
 }
+
+/**
+ * Dev-only guard. Each chapter normalises its scrubbed timeline to totalDuration 1
+ * so "timeline time == pin-local progress" and every §6 beat anchor is honoured. A
+ * scrubbed tween whose end overruns 1 would rescale the whole scroll→time mapping and
+ * fire beats early — so after building a chapter's beats, assert the invariant. No-op
+ * in production.
+ */
+export function assertNormalized(timeline: gsap.core.Timeline, label: string): void {
+  if (process.env.NODE_ENV === "production") return;
+  const total = timeline.totalDuration();
+  console.assert(
+    Math.abs(total - 1) < 1e-3,
+    `[${label}] chapter timeline totalDuration must be 1 (time == local progress); got ${total.toFixed(4)}`,
+  );
+}
