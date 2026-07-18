@@ -27,6 +27,13 @@ export interface BlurInOptions {
   stagger?: number;
   /** Extra delay before the reveal (seconds). */
   delay?: number;
+  /**
+   * SplitText `type`. Default `"words,chars"`: chars animate for the blur-in while
+   * being NESTED inside inline-block word wrappers, so a headline / the hero name can
+   * only ever wrap at word boundaries — never mid-word (chars alone are inline and
+   * break anywhere). Override only if you need a different granularity.
+   */
+  type?: string;
 }
 
 export interface BlurInHandle {
@@ -36,8 +43,9 @@ export interface BlurInHandle {
 
 export function blurIn(target: Element, opts: BlurInOptions = {}): BlurInHandle {
   // `aria: "auto"` keeps the element readable to AT (labels the container with the
-  // original text, hides the per-char spans) after the split.
-  const split = new SplitText(target, { type: "chars", aria: "auto" });
+  // original text, hides the per-char spans) after the split. `words,chars` nests the
+  // animated chars inside inline-block word wrappers → wraps only at word boundaries.
+  const split = new SplitText(target, { type: opts.type ?? "words,chars", aria: "auto" });
 
   const tween = gsap.from(split.chars, {
     filter: "blur(12px)",

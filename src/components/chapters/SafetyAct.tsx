@@ -244,12 +244,9 @@ export default function SafetyAct({
             className="flex flex-col gap-5 motion-safe:md:absolute motion-safe:md:inset-0 motion-safe:md:opacity-0"
           >
             <SlateCard card={quantlab} />
-            {/* Task 5: kill-criteria / referee DrawSVG diagram mounts here (scrub 0.44–0.62). */}
-            <div
-              aria-hidden="true"
-              data-killcriteria-slot
-              className="h-24 rounded-[var(--radius-media)] border border-dashed border-[color:var(--hairline)]"
-            />
+            {/* Task 5: kill-criteria / referee DrawSVG diagram mounts here (scrub 0.44–0.62).
+                Reserves layout space; intentionally invisible (no border/fill) until then. */}
+            <div aria-hidden="true" data-killcriteria-slot className="h-24" />
           </div>
 
           {/* Beat 3 — thesis */}

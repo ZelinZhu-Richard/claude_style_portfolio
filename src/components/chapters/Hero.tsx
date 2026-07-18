@@ -110,7 +110,7 @@ export default function Hero({ ref }: { ref?: React.Ref<ChapterHandle> }) {
       <div className="flex flex-col items-center gap-6">
         <h1
           ref={nameRef}
-          className="font-[family-name:var(--font-display)] font-medium uppercase leading-[0.95] tracking-normal text-[color:var(--fg)]"
+          className="text-balance font-[family-name:var(--font-display)] font-medium uppercase leading-[0.95] tracking-normal text-[color:var(--fg)]"
           style={{ fontSize: "clamp(96px, 14vw, 220px)" }}
         >
           {hero.name}
