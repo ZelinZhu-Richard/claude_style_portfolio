@@ -47,6 +47,19 @@ export interface ScrollState {
   noiseAmp: number;
   /** Pointer position normalized to -1..1, for camera/parallax (§7 camera). */
   pointer: { x: number; y: number };
+  /**
+   * Act blend for the canvas: 0 = cream act, 1 = dark act. ScrollStory's two
+   * background crossfade triggers write this in lockstep with the DOM `--bg`
+   * paint (Task 4 §7): the constellation/backdrop lerp ALL colours from it and
+   * switch Normal→Additive blending at 0.5, so canvas and DOM stay in sync.
+   */
+  themeBlend: number;
+  /**
+   * Research row hover seam (§6 ch5 / §7 `uHighlight[5]`): the project-index row
+   * under the pointer maps to a moon 0..4 that the constellation brightens 1.4× /
+   * scales 1.2×; -1 = none. A delegated `[data-project-row]` listener writes it.
+   */
+  highlightMoon: number;
 }
 
 /**
@@ -63,6 +76,8 @@ export const scrollState: ScrollState = {
   morph: 0,
   noiseAmp: 0.15,
   pointer: { x: 0, y: 0 },
+  themeBlend: 0,
+  highlightMoon: -1,
 };
 
 /**
@@ -80,4 +95,6 @@ export function resetScrollState(): void {
   scrollState.noiseAmp = 0.15;
   scrollState.pointer.x = 0;
   scrollState.pointer.y = 0;
+  scrollState.themeBlend = 0;
+  scrollState.highlightMoon = -1;
 }

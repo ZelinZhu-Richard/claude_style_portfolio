@@ -216,6 +216,7 @@ export default function ScrollStory() {
           invalidateOnRefresh: true,
           onUpdate: (self) => {
             paint(CREAM, DARK, self.progress);
+            scrollState.themeBlend = self.progress; // Task 4: canvas lerps in lockstep
             root.dataset.theme = self.progress >= 0.5 ? "dark" : "light"; // flip at midpoint
           },
         });
@@ -225,9 +226,26 @@ export default function ScrollStory() {
           invalidateOnRefresh: true,
           onUpdate: (self) => {
             paint(DARK, CREAM, self.progress);
+            scrollState.themeBlend = 1 - self.progress; // dark act → cream
             root.dataset.theme = self.progress >= 0.5 ? "light" : "dark";
           },
         });
+
+        // Research row hover seam (§6 ch5 / §7 `uHighlight[5]`): a delegated
+        // pointer listener maps the `[data-project-row]` under the cursor to a moon
+        // 0..4 that the constellation brightens. Delegation (one listener) keeps it
+        // cheap; the canvas reads `scrollState.highlightMoon` in useFrame.
+        const onRowOver = (ev: PointerEvent) => {
+          const row = (ev.target as HTMLElement | null)?.closest?.("[data-project-row]");
+          const raw = row?.getAttribute("data-project-row");
+          scrollState.highlightMoon = raw == null ? -1 : Number(raw) % 5;
+        };
+        const onRowOut = (ev: PointerEvent) => {
+          const to = ev.relatedTarget as HTMLElement | null;
+          if (!to?.closest?.("[data-project-row]")) scrollState.highlightMoon = -1;
+        };
+        window.addEventListener("pointerover", onRowOver, { passive: true });
+        window.addEventListener("pointerout", onRowOut, { passive: true });
 
         // Pointer parallax → scroll-state (rAF-throttled; Task 4's useFrame lerps it).
         let queued = false;
@@ -248,6 +266,8 @@ export default function ScrollStory() {
         return () => {
           cleanups.forEach((fn) => fn()); // revert chapter SplitText instances
           window.removeEventListener("pointermove", onMove);
+          window.removeEventListener("pointerover", onRowOver);
+          window.removeEventListener("pointerout", onRowOut);
         };
       });
 
@@ -279,7 +299,10 @@ export default function ScrollStory() {
             duration: 0.4, // §9 reduced-motion: color crossfade kept at 0.4s (spec-literal)
             ease: "none",
             overwrite: true,
-            onUpdate: () => paint(from, to, proxy.t),
+            onUpdate: () => {
+              paint(from, to, proxy.t);
+              scrollState.themeBlend = dark ? proxy.t : 1 - proxy.t; // canvas lockstep
+            },
           });
         };
         const safety = document.getElementById("chapter-safety");

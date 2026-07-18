@@ -16,6 +16,12 @@ export const palette = {
   manilla: "#EBDBBC",
   creamGhost: "rgba(250, 249, 245, 0.92)",
   olive: "#7D8A6C",
+  /**
+   * Warm hairline used for the shielded-lattice edges (spec §7 formation 2:
+   * "warm #E8C4A0 alpha 0.25"). Canvas-only — not a DOM surface token — but it
+   * lives here so `components/canvas/*` never hard-code a hex (brief constraint).
+   */
+  latticeLine: "#E8C4A0",
 } as const;
 
 export type Palette = typeof palette;
