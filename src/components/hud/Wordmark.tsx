@@ -80,7 +80,7 @@ export default function Wordmark() {
     <button
       type="button"
       onClick={onClick}
-      aria-label="Scroll to top"
+      aria-label="Z—Z, scroll to top"
       className="hud hud--top hud--left label inline-flex items-center gap-2 text-[color:var(--fg)] text-base tracking-[0.08em] bg-transparent border-0 cursor-pointer"
     >
       {/* The site mark ① — inherits --fg so it flips with the act theme. */}

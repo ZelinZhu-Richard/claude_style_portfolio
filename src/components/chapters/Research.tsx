@@ -132,7 +132,7 @@ export default function Research({
         />
         <div className="mx-auto flex w-full max-w-[1100px] flex-col gap-8">
           <header className="flex flex-col gap-3">
-            <span className="label text-xs text-[color:var(--terracotta)]">
+            <span className="label text-xs text-[color:var(--terracotta-text)]">
               {chapter.actLabel}
             </span>
             <h2
@@ -158,7 +158,7 @@ export default function Research({
                 className="flex flex-col gap-2 rounded-[var(--radius-card)] border border-[color:var(--hairline)] bg-[color:var(--paper-deep)] p-5 text-[color:var(--ink)]"
               >
                 {card.eyebrow ? (
-                  <span className="label text-[0.6rem] text-[color:var(--terracotta)]">
+                  <span className="label text-[0.6rem] text-[color:var(--terracotta-text)]">
                     {card.eyebrow}
                   </span>
                 ) : null}

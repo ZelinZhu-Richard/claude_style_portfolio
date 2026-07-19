@@ -214,7 +214,7 @@ export default function SafetyAct({
     >
       <header className="flex flex-col gap-3">
         <div className="flex items-center gap-4">
-          <span className="label text-xs text-[color:var(--terracotta)]">{chapter.actLabel}</span>
+          <span className="label text-xs text-[color:var(--terracotta-text)]">{chapter.actLabel}</span>
           <span className="label text-xs text-[color:var(--fg)] opacity-50">{index}</span>
         </div>
         <h2

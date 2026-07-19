@@ -23,6 +23,17 @@
   --slate-raised: #201f1e;
   --terracotta: #cc785c;
   --terracotta-hot: #d97757;
+  /* AA-safe variant of --terracotta for small text ONLY (the mono "act label"
+     copy, e.g. "ACT II — SAFETY"): --terracotta on --paper is 3.11:1 at 12px,
+     under WCAG's 4.5:1 floor for normal-weight body-size text. Same hue,
+     ~12% darker — visually reads as the same accent, passes at ~4.6:1. Every
+     other terracotta usage (icons, hover states, bezel, large display type)
+     is decorative/graphical (3:1 floor) or large text and is unaffected.
+     Light-theme value only — --terracotta already clears 4.5:1 against both
+     dark-act backgrounds (~5:1+), so darkening it further there would make
+     things worse; the [data-theme="dark"] block below resets this back to
+     plain --terracotta. */
+  --terracotta-text: #b35738;
   --kraft: #d4a27f;
   --manilla: #ebdbbc;
   --cream-ghost: rgba(250, 249, 245, 0.92);
@@ -39,6 +50,9 @@
   --hairline: rgba(250, 249, 245, 0.14);
   --bg: var(--ink);
   --fg: var(--paper);
+  /* Undo the light-theme-only darkening above: plain --terracotta already
+     passes 4.5:1 on both dark-act backgrounds. */
+  --terracotta-text: var(--terracotta);
 }
 
 @theme inline {

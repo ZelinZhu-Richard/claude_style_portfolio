@@ -47,7 +47,13 @@ export interface WordFadeOptions {
  * Returns the SplitText so the caller can revert it on teardown, exactly like `wordScrub`.
  */
 export function wordFadeIn(target: Element, opts: WordFadeOptions = {}): SplitText {
-  const split = new SplitText(target, { type: "words", aria: "auto" });
+  // `aria: "none"` (not SplitText's default "auto"): every current caller targets a
+  // `<p>`, and "auto" sets `aria-label` on the container — invalid per ARIA (the
+  // paragraph role doesn't support name-from-author; Lighthouse/axe flags it as
+  // `aria-prohibited-attr`). "none" leaves the split `<span>` words un-hidden, so
+  // assistive tech still reads the identical text straight off the DOM — no change
+  // in what's announced, just no invalid attribute on the container.
+  const split = new SplitText(target, { type: "words", aria: "none" });
   gsap.from(split.words, {
     opacity: opts.from ?? 0.15,
     duration: duration.reveal,
@@ -63,7 +69,9 @@ export function wordScrub(
   target: Element,
   opts: WordScrubOptions = {},
 ): SplitText {
-  const split = new SplitText(target, { type: "words", aria: "auto" });
+  // See `wordFadeIn` above: "none" instead of SplitText's default "auto" — every
+  // caller targets a `<p>`, which can't validly carry `aria-label`.
+  const split = new SplitText(target, { type: "words", aria: "none" });
   const words = split.words;
 
   const start = opts.start ?? 0;

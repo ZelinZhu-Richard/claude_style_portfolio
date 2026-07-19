@@ -145,7 +145,7 @@ export default function Community({
     >
       <div className="mx-auto flex w-full max-w-[1100px] flex-col gap-8">
         <header className="flex flex-col gap-3">
-          <span className="label text-xs text-[color:var(--terracotta)]">{chapter.actLabel}</span>
+          <span className="label text-xs text-[color:var(--terracotta-text)]">{chapter.actLabel}</span>
           <h2
             ref={headlineRef}
             data-rule-a
