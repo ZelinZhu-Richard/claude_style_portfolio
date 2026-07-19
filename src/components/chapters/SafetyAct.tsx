@@ -21,7 +21,7 @@
 
 import { useImperativeHandle, useRef } from "react";
 import { gsap } from "gsap";
-import { blurIn, drawIn, rise, scramble, wordScrub } from "@/lib/effects";
+import { blurIn, drawIn, rise, scramble, wordFadeIn, wordScrub } from "@/lib/effects";
 import { ease } from "@/lib/motion/tokens";
 import { safety, type ProjectCard } from "@/content/chapters";
 import type { ChapterDef } from "@/lib/scroll-map";
@@ -86,7 +86,7 @@ export default function SafetyAct({
   const [scutum, quantlab, al9ha] = safety.cards;
 
   useImperativeHandle(ref, () => ({
-    connect(timeline) {
+    connect(timeline, opts) {
       const pin = timeline?.scrollTrigger;
       const root = rootRef.current;
       const headline = headlineRef.current;
@@ -94,6 +94,13 @@ export default function SafetyAct({
       const body = bodyRef.current;
       const closing = closingRef.current;
       if (!timeline || !pin || !root || !headline || !sub || !body || !closing) return;
+
+      // §10 mobile: KEEP the pin + the three-beat crossfade (the core act, shortened to
+      // 240vh by ScrollStory), but Rule B paragraphs become one-shot staggered word-fades
+      // on enter instead of scrubs (scrub-on-touch feels broken). The closing line rides
+      // beat 3's crossfade rather than a separate word-scrub. Everything else — the beat
+      // swaps, chip scrambles, strikethrough, DrawSVGs, audit-log ticks — is identical.
+      const mobile = opts?.mobile === true;
 
       const splits: SplitText[] = [];
 
@@ -108,8 +115,14 @@ export default function SafetyAct({
       );
 
       // ---- Beat 1 — Scutum (0.08–0.40) ----
-      splits.push(wordScrub(timeline, sub, { start: 0.08, end: 0.2 }));
-      splits.push(wordScrub(timeline, body, { start: 0.14, end: 0.34 }));
+      if (mobile) {
+        const onEnter = { trigger: pin.trigger as Element, start: "top 80%", once: true };
+        splits.push(wordFadeIn(sub, { scrollTrigger: onEnter }));
+        splits.push(wordFadeIn(body, { scrollTrigger: onEnter }));
+      } else {
+        splits.push(wordScrub(timeline, sub, { start: 0.08, end: 0.2 }));
+        splits.push(wordScrub(timeline, body, { start: 0.14, end: 0.34 }));
+      }
       const scutumCard = root.querySelector<HTMLElement>('[data-beat="1"] [data-beat-card]');
       if (scutumCard) rise(scutumCard, { timeline, position: 0.12, end: 0.3 });
 
@@ -170,7 +183,9 @@ export default function SafetyAct({
       // ---- Beat 3 — thesis (0.72–1.0) ----
       if (beat2) timeline.to(beat2, { y: -24, opacity: 0, ease: "none", duration: 0.04 }, 0.72);
       if (beat3) rise(beat3, { timeline, position: 0.74, end: 0.84 });
-      splits.push(wordScrub(timeline, closing, { start: 0.8, end: 0.98 }));
+      // Desktop: closing line Rule B word-scrub. Mobile: it rides beat 3's crossfade
+      // (the whole beat rises into view), so no separate scrub — scrub-on-touch feels off.
+      if (!mobile) splits.push(wordScrub(timeline, closing, { start: 0.8, end: 0.98 }));
 
       // ③ hatched shield wraps the constellation's negative space, scrub 0.74–0.9.
       const shield = root.querySelector<SVGElement>("[data-shield-illo]");
@@ -195,7 +210,7 @@ export default function SafetyAct({
   return (
     <div
       ref={rootRef}
-      className="relative flex min-h-screen w-full flex-col px-8 py-16 text-[color:var(--fg)] motion-safe:md:h-screen motion-safe:md:min-h-0 motion-safe:md:overflow-hidden"
+      className="relative flex min-h-screen w-full flex-col px-8 py-16 text-[color:var(--fg)] motion-safe:h-screen motion-safe:min-h-0 motion-safe:overflow-hidden"
     >
       <header className="flex flex-col gap-3">
         <div className="flex items-center gap-4">
@@ -204,6 +219,7 @@ export default function SafetyAct({
         </div>
         <h2
           ref={headlineRef}
+          data-rule-a
           className="font-[family-name:var(--font-display)] font-medium leading-[0.95] tracking-[-0.03em] text-[color:var(--fg)] text-[clamp(2.5rem,8vw,6rem)]"
         >
           <HeadlineText headline={safety.headline} />
@@ -214,10 +230,13 @@ export default function SafetyAct({
         {/* LEFT — three swapping beats. On desktop they stack (absolute) and swap;
             under reduced-motion / mobile they flow, all readable. */}
         <div className="relative">
-          {/* Beat 1 — Scutum */}
+          {/* Beat 1 — Scutum. Choreography classes are `motion-safe:` (not `md:`) so the
+              pinned beat-swap runs in BOTH desktop and mobile motion-safe contexts, and
+              reduced-motion (motion-reduce) still flows all three beats statically. This
+              also makes the layout width-independent, closing the exact-768px seam. */}
           <div
             data-beat="1"
-            className="flex flex-col gap-5 motion-safe:md:absolute motion-safe:md:inset-0"
+            className="flex flex-col gap-5 motion-safe:absolute motion-safe:inset-0"
           >
             <p ref={subRef} className="text-xl text-[color:var(--fg)]">
               {safety.sub}
@@ -230,7 +249,7 @@ export default function SafetyAct({
                 <span
                   key={risk}
                   data-risk-chip
-                  className="label rounded-[var(--radius-chip)] border border-[color:var(--hairline)] px-2.5 py-1 text-[0.65rem] text-[color:var(--fg)] motion-safe:md:opacity-0"
+                  className="label rounded-[var(--radius-chip)] border border-[color:var(--hairline)] px-2.5 py-1 text-[0.65rem] text-[color:var(--fg)] motion-safe:opacity-0"
                 >
                   {risk}
                 </span>
@@ -245,12 +264,12 @@ export default function SafetyAct({
                 <span
                   data-strike
                   aria-hidden="true"
-                  className="absolute left-0 top-1/2 h-px w-full origin-left bg-[color:var(--terracotta)] motion-safe:md:scale-x-0"
+                  className="absolute left-0 top-1/2 h-px w-full origin-left bg-[color:var(--terracotta)] motion-safe:scale-x-0"
                 />
               </span>
               <span
                 data-blocked
-                className="label rounded-[var(--radius-chip)] bg-[color:var(--terracotta)] px-2.5 py-1 text-[0.65rem] text-[color:var(--paper)] motion-safe:md:opacity-0"
+                className="label rounded-[var(--radius-chip)] bg-[color:var(--terracotta)] px-2.5 py-1 text-[0.65rem] text-[color:var(--paper)] motion-safe:opacity-0"
               >
                 {BLOCKED_LABEL}
               </span>
@@ -261,7 +280,7 @@ export default function SafetyAct({
           {/* Beat 2 — Quantlab */}
           <div
             data-beat="2"
-            className="flex flex-col gap-5 motion-safe:md:absolute motion-safe:md:inset-0 motion-safe:md:opacity-0"
+            className="flex flex-col gap-5 motion-safe:absolute motion-safe:inset-0 motion-safe:opacity-0"
           >
             <SlateCard card={quantlab} />
             {/* Kill-criteria / referee flow diagram (scrub 0.44–0.62). The h-24 slot
@@ -274,7 +293,7 @@ export default function SafetyAct({
           {/* Beat 3 — thesis */}
           <div
             data-beat="3"
-            className="flex flex-col gap-6 motion-safe:md:absolute motion-safe:md:inset-0 motion-safe:md:opacity-0"
+            className="flex flex-col gap-6 motion-safe:absolute motion-safe:inset-0 motion-safe:opacity-0"
           >
             <SlateCard card={al9ha} />
             <p

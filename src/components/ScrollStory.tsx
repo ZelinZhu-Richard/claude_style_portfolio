@@ -10,7 +10,11 @@
  *    `scroll-state`
  *  - the background act crossfade (cream → ink → cream) over the §6 vh windows
  *  - a global page-progress trigger for the HUD %
- *  - a reduced-motion / mobile fallback with no pins (flow) but a safe color fade
+ *  - THREE mutually-exclusive matchMedia contexts (Task 7): DESKTOP (full 1400vh pinned
+ *    choreography), MOBILE (§10 motion-safe cinematic — Hero unpinned, Safety a shortened
+ *    240vh pin, the rest flowing with one-shot reveals, element-anchored crossfades), and
+ *    REDUCED (§9 static map, 0.4s Rule-A fades). They are exhaustive and gap-free, so the
+ *    exact-768px boundary never leaves choreography CSS hiding content no JS reveals.
  *  - pointer parallax → `scroll-state` (Task 4's useFrame reads it)
  *
  * CHAPTER HANDOFF (Task 3): ScrollStory still owns section shells, pins, tracking,
@@ -55,9 +59,34 @@ type ThemeColors = { bg: string; fg: string };
 const CREAM: ThemeColors = { bg: palette.paper, fg: palette.ink };
 const DARK: ThemeColors = { bg: palette.ink, fg: palette.creamGhost };
 
-// matchMedia queries (spec §9 reduced-motion map / §10 mobile).
-const DESKTOP = "(min-width: 769px) and (prefers-reduced-motion: no-preference)";
-const REDUCED = "(prefers-reduced-motion: reduce), (max-width: 768px)";
+// ── matchMedia contexts (spec §9 reduced-motion / §10 mobile) ────────────────────
+// Three mutually-exclusive, EXHAUSTIVE contexts — no width/pointer combination falls
+// through a gap (the "exact-768px seam" the brief calls out), so the choreography CSS
+// (`motion-safe:`) and the `desktop:` custom variant are always paired with a JS context
+// that reveals what they hide:
+//
+//   REDUCED  = reduce (any width)                    → §9 static map, 0.4s Rule-A fades
+//   DESKTOP  = no-pref ∧ ≥768px ∧ not-coarse         → full 1400vh pinned choreography
+//   MOBILE   = no-pref ∧ (<768px ∨ coarse pointer)   → §10 mobile cinematic (short pins)
+//
+// DESKTOP's `min-width:768` matches Tailwind's `md` (768px) and the `desktop:` custom
+// variant defined in globals.css, so the desktop-only pinned-viewport CSS engages exactly
+// where the desktop JS context does. Safety's beat-swap gating is `motion-safe:` (both
+// DESKTOP and MOBILE call `connect`, so it is revealed in both; REDUCED never hides it).
+// Exhaustiveness for no-preference: coarse→MOBILE, fine/none ≥768→DESKTOP, anything
+// <768→MOBILE; DESKTOP requires not-coarse, so a coarse device ≥768 is MOBILE, never both.
+const REDUCED = "(prefers-reduced-motion: reduce)";
+const DESKTOP =
+  "(min-width: 768px) and (not (pointer: coarse)) and (prefers-reduced-motion: no-preference)";
+const MOBILE =
+  "(prefers-reduced-motion: no-preference) and (max-width: 767px), (prefers-reduced-motion: no-preference) and (pointer: coarse)";
+
+// §10 mobile scroll budgets (vh). Hero unpins (natural 100vh, load animation only);
+// About + Community + Research + Honors + Contact flow at natural height; ONLY Safety
+// keeps its pin — the core act — shortened 400→240vh. New total ≈ 850vh (vs desktop's
+// invariant 1400vh, which applies to DESKTOP only). Background crossfades are re-derived
+// as element-anchored triggers (below), not the desktop absolute-px windows.
+const MOBILE_SAFETY_VH = 240;
 
 export default function ScrollStory() {
   const mainRef = useRef<HTMLElement>(null);
@@ -271,10 +300,113 @@ export default function ScrollStory() {
         };
       });
 
-      // ============ REDUCED-MOTION / MOBILE: flow, no pins, 0.4s bg fade ============
-      // Basic correct fallback (full mobile choreography is Task 7, per §10). Chapters
-      // render at their natural full-opacity CSS state (connect is desktop-only), so
-      // all content is statically readable.
+      // ============ MOBILE (motion-safe): §10 cinematic — short pins, flow, fades =====
+      // A REAL mobile experience (distinct from reduced-motion): Hero unpins with its
+      // load blur-in, Safety keeps a shortened 240vh pin (the core act, all three beats
+      // swapping), and About / Community / Research / Honors / Contact flow with one-shot
+      // reveals. Chapters build their §10 variant via connect(timeline?, { mobile:true }):
+      // Rule B word-scrubs become one-shot staggered fades, the Honors marquee drifts at a
+      // constant speed, Rule A blur-ins / counters / chip scrambles are kept.
+      //
+      // ABOUT stays a FLOW section on mobile (not the §10 120vh pin): its stacked content
+      // — headline, paragraph, 6 stat tiles, 2 cards — exceeds a phone viewport, and a pin
+      // would fix it taller-than-screen and clip the lower half. Flowing it keeps every
+      // stat + card reachable while still revealing on enter (documented deviation). Safety
+      // pins cleanly because only one beat is on screen at a time (absolute-stacked swap).
+      mm.add(MOBILE, (context) => {
+        setActive(CHAPTERS[0].index, CHAPTERS[0].formation, CHAPTERS[0].formation);
+
+        const connects: Array<{ id: string; timeline?: gsap.core.Timeline }> = [];
+
+        CHAPTERS.forEach((c, i) => {
+          const el = document.getElementById(`chapter-${c.id}`);
+          if (!el) return;
+          const from: Formation = i === 0 ? c.formation : CHAPTERS[i - 1].formation;
+          const to = c.formation;
+
+          if (c.id === "safety") {
+            // The one mobile pin (§10): full-section pin, shortened to 240vh. Local
+            // progress still runs 0→1, so the chapter's beat anchors (0.4 / 0.72 swaps,
+            // chip pulses) map straight onto the shorter footprint (deferred item #8).
+            const timeline = gsap.timeline({
+              scrollTrigger: {
+                trigger: el,
+                start: "top top",
+                end: `+=${MOBILE_SAFETY_VH - 100}%`,
+                pin: el,
+                scrub: c.scrub ?? true,
+                invalidateOnRefresh: true,
+                onEnter: () => setActive(c.index, from, to),
+                onEnterBack: () => setActive(c.index, from, to),
+                onUpdate: (self) => drive(c, from, to, self.progress),
+                onToggle: (self) => {
+                  el.style.willChange = self.isActive ? "transform" : "";
+                },
+              },
+            });
+            connects.push({ id: c.id, timeline });
+          } else {
+            // Everything else flows at natural height; still drive chapter/formation state
+            // for the constellation morph, and still receive a mobile connect() reveal.
+            trackChapter(el, c, from, to);
+            connects.push({ id: c.id });
+          }
+        });
+
+        // Hand each chapter its MOBILE build after fonts settle (SplitText needs fonts).
+        const cleanups: Array<() => void> = [];
+        document.fonts.ready.then(() => {
+          if (context.isReverted) return;
+          context.add(() => {
+            connects.forEach(({ id, timeline }) => {
+              const cleanup = chapterHandles[id]?.current?.connect(timeline, { mobile: true });
+              if (cleanup) cleanups.push(cleanup);
+            });
+          });
+          ScrollTrigger.refresh();
+        });
+
+        // Background act crossfades — ELEMENT-ANCHORED (§10), not the desktop absolute-px
+        // windows. cream→ink scrubs as Safety enters (completing before it pins at top);
+        // ink→cream scrubs as Community enters. themeBlend + the theme flip ride along so
+        // the canvas and bezel stay in lockstep, exactly like desktop.
+        const safety = document.getElementById("chapter-safety");
+        const community = document.getElementById("chapter-community");
+        if (safety)
+          ScrollTrigger.create({
+            trigger: safety,
+            start: "top 85%",
+            end: "top 35%",
+            scrub: true,
+            invalidateOnRefresh: true,
+            onUpdate: (self) => {
+              paint(CREAM, DARK, self.progress);
+              scrollState.themeBlend = self.progress;
+              root.dataset.theme = self.progress >= 0.5 ? "dark" : "light";
+            },
+          });
+        if (community)
+          ScrollTrigger.create({
+            trigger: community,
+            start: "top 85%",
+            end: "top 35%",
+            scrub: true,
+            invalidateOnRefresh: true,
+            onUpdate: (self) => {
+              paint(DARK, CREAM, self.progress);
+              scrollState.themeBlend = 1 - self.progress;
+              root.dataset.theme = self.progress >= 0.5 ? "light" : "dark";
+            },
+          });
+
+        return () => cleanups.forEach((fn) => fn());
+      });
+
+      // ============ REDUCED-MOTION (any width): §9 static map, 0.4s Rule-A fades =======
+      // Chapters render at their natural full-opacity CSS state (connect is never called
+      // here), so all content is statically readable; ScrollStory adds only the §9-mandated
+      // 0.4s Rule-A opacity fades on the chapter headlines and the safe 0.4s colour fade at
+      // the act boundaries. No pins, no scrubs, no drift.
       mm.add(REDUCED, () => {
         setActive(CHAPTERS[0].index, CHAPTERS[0].formation, CHAPTERS[0].formation);
         const els: HTMLElement[] = [];
@@ -286,6 +418,17 @@ export default function ScrollStory() {
           gsap.set(el, { minHeight: `${c.vh}vh` }); // flow height = §6 budget (no pins)
           const from: Formation = i === 0 ? c.formation : CHAPTERS[i - 1].formation;
           trackChapter(el, c, from, c.formation);
+
+          // §9: rule A → a 0.4s opacity fade (NOT the blur-in, NOT instant). Fade each
+          // chapter headline in once as it enters. Everything else is full-opacity static.
+          const headline = el.querySelector<HTMLElement>("[data-rule-a]");
+          if (headline)
+            gsap.from(headline, {
+              opacity: 0,
+              duration: 0.4,
+              ease: "none",
+              scrollTrigger: { trigger: el, start: "top 85%", once: true },
+            });
         });
 
         // Color fade is safe under reduced-motion (§9): keep it, but as a quick 0.4s

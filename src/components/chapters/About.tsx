@@ -17,7 +17,8 @@
 
 import { useImperativeHandle, useRef } from "react";
 import { gsap } from "gsap";
-import { blurIn, drawIn, rise, scramble, wordScrub } from "@/lib/effects";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { blurIn, drawIn, rise, scramble, wordFadeIn, wordScrub } from "@/lib/effects";
 import { stagger } from "@/lib/motion/tokens";
 import { scrollState } from "@/lib/scroll-state";
 import { about } from "@/content/chapters";
@@ -61,11 +62,69 @@ export default function About({ ref }: { ref?: React.Ref<ChapterHandle> }) {
   const contentRef = useRef<HTMLDivElement>(null);
 
   useImperativeHandle(ref, () => ({
-    connect(timeline) {
+    connect(timeline, opts) {
       const pin = timeline?.scrollTrigger;
       const content = contentRef.current;
       const headline = headlineRef.current;
       const body = bodyRef.current;
+
+      // ---- MOBILE (§10): About may be a shortened 120vh pin OR flow; either way the
+      // beats reveal ONCE on enter (scrub-on-touch feels broken). Rule A headline blur-in
+      // kept; Rule B body → one-shot staggered word-fade; stats/cards rise on enter;
+      // counters count up + labels scramble on enter. No scrubbed fade-out. This build is
+      // trigger-agnostic (works whether ScrollStory pins the stage or lets it flow).
+      if (opts?.mobile) {
+        if (!content || !headline || !body) return;
+        const splits: SplitText[] = [];
+        const trigger = (pin?.trigger as Element) ?? content;
+
+        splits.push(
+          blurIn(headline, { scrollTrigger: { trigger, start: "top 85%", once: true } }).split,
+        );
+        const illo = trigger.querySelector<SVGElement>("[data-about-illo]");
+        if (illo) drawIn(illo, { scrollTrigger: { trigger, start: "top 70%", once: true } });
+
+        splits.push(wordFadeIn(body, { scrollTrigger: { trigger, start: "top 80%", once: true } }));
+
+        // §6 ch2 nebula "holds its breath" — ease noiseAmp 0.15 → 0.04 as About enters.
+        gsap.to(scrollState, {
+          noiseAmp: 0.04,
+          duration: 1.2,
+          ease: "power1.out",
+          scrollTrigger: { trigger, start: "top 75%", once: true },
+        });
+
+        const tiles = content.querySelectorAll<HTMLElement>("[data-stat]");
+        rise(tiles, {
+          stagger: stagger.cards,
+          scrollTrigger: { trigger, start: "top 80%", once: true },
+        });
+        const cards = content.querySelectorAll<HTMLElement>("[data-about-card]");
+        rise(cards, {
+          stagger: stagger.cards,
+          scrollTrigger: { trigger, start: "top 70%", once: true },
+        });
+
+        const numerals = content.querySelectorAll<HTMLElement>("[data-stat-value]");
+        const labels = content.querySelectorAll<HTMLElement>("[data-stat-label]");
+        let counted = false;
+        const counter = ScrollTrigger.create({
+          trigger,
+          start: "top 80%",
+          onEnter: () => {
+            if (counted) return;
+            counted = true;
+            numerals.forEach((el, i) => countUp(el, { delay: i * stagger.cards }));
+            labels.forEach((el, i) => scramble(el, { delay: i * stagger.cards }));
+          },
+        });
+
+        return () => {
+          counter.kill();
+          splits.forEach((s) => s.revert());
+        };
+      }
+
       if (!timeline || !pin || !content || !headline || !body) return;
 
       const splits: SplitText[] = [];
@@ -123,7 +182,7 @@ export default function About({ ref }: { ref?: React.Ref<ChapterHandle> }) {
   }));
 
   return (
-    <div className="relative flex min-h-screen w-full flex-col items-center justify-center px-8 py-16 motion-safe:md:h-screen motion-safe:md:min-h-0 motion-safe:md:overflow-hidden">
+    <div className="relative flex min-h-screen w-full flex-col items-center justify-center px-8 py-16 desktop:h-screen desktop:min-h-0 desktop:overflow-hidden">
       {/* ② head-with-constellation — right-gutter margin illustration. Absolute + xl+
           so it lives in the gutter without shifting the footprint. Verified headlessly
           at 1280/1440 not to overlap the centered 1100px column's text. */}
@@ -135,6 +194,7 @@ export default function About({ ref }: { ref?: React.Ref<ChapterHandle> }) {
         <div className="flex flex-col gap-4">
           <h2
             ref={headlineRef}
+            data-rule-a
             className="font-[family-name:var(--font-display)] font-medium leading-[0.95] tracking-[-0.03em] text-[color:var(--fg)] text-[clamp(2.5rem,7vw,5.5rem)]"
           >
             <HeadlineText headline={about.headline} />

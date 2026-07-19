@@ -19,21 +19,42 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 // `gsap.core.*` is an ambient global namespace from GSAP's type definitions — no
 // value import needed to reference it in a type position.
 
+/**
+ * Options that tune how a chapter builds its beats. Passed by ScrollStory from the
+ * active `gsap.matchMedia` context.
+ *
+ * `mobile` selects the spec §10 mobile motion-safe build: Rule B word-scrubs become
+ * one-shot staggered fades on enter (scrub-on-touch feels broken), the Honors marquee
+ * drifts at a constant speed (no velocity coupling), and flow / unpinned chapters that
+ * are pinned on desktop (Hero, Community, Research) reveal on enter instead of scrubbing.
+ * Rule A blur-ins, counters, and chip scrambles are kept as one-shots. Desktop passes
+ * no options (or `{}`), so its build path is byte-identical to before this task.
+ *
+ * The REDUCED-motion context (§9) never calls `connect` at all — chapters then render at
+ * their natural, full-opacity CSS state, which is the statically-readable fallback §9
+ * wants (ScrollStory adds the §9 0.4s Rule-A fades itself).
+ */
+export interface ConnectOptions {
+  /** Spec §10 mobile motion-safe build (see above). */
+  mobile?: boolean;
+}
+
 export interface ChapterHandle {
   /**
    * Attach this chapter's beats to the scroll spine.
    *
-   * PINNED chapters (Hero, About, Safety, Community, Research) receive their pinned
-   * scrubbed `timeline` (its ScrollTrigger is reachable as `timeline.scrollTrigger`)
-   * and hang Rule A–D beats on it. FLOW / sticky chapters (Honors, Contact) have no
-   * pinned timeline, so ScrollStory calls `connect()` with no argument — they build
-   * only real-time one-shot reveals (Rule C rise on enter, Rule A blur-in) on their
-   * own DOM; those triggers are still created inside ScrollStory's desktop matchMedia
-   * context (connect runs there), so they tear down with it.
+   * PINNED chapters receive their pinned scrubbed `timeline` (its ScrollTrigger is
+   * reachable as `timeline.scrollTrigger`) and hang Rule A–D beats on it. FLOW / sticky
+   * chapters (Honors, Contact — and, on mobile, Hero / Community / Research which unpin
+   * per §10) have no pinned timeline, so ScrollStory calls `connect(undefined, opts)`
+   * — they build only real-time one-shot reveals on their own DOM. Those triggers are
+   * created inside the calling matchMedia context, so they tear down with it.
    *
+   * @param timeline the pinned scrubbed timeline (pinned chapters), or undefined (flow).
+   * @param opts     build tuning — `{ mobile: true }` selects the §10 mobile build.
    * @returns optional cleanup reverting the chapter's SplitText instances.
    */
-  connect: (timeline?: gsap.core.Timeline) => (() => void) | void;
+  connect: (timeline?: gsap.core.Timeline, opts?: ConnectOptions) => (() => void) | void;
 }
 
 /**

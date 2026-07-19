@@ -22,7 +22,9 @@
  */
 
 import { useImperativeHandle, useRef } from "react";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { blurIn, drawIn, rise, scramble } from "@/lib/effects";
+import { stagger } from "@/lib/motion/tokens";
 import { wireHoverArrows } from "@/lib/interactions";
 import { community } from "@/content/chapters";
 import type { ChapterDef } from "@/lib/scroll-map";
@@ -52,10 +54,44 @@ export default function Community({
   const headlineRef = useRef<HTMLHeadingElement>(null);
 
   useImperativeHandle(ref, () => ({
-    connect(timeline) {
+    connect(timeline, opts) {
       const pin = timeline?.scrollTrigger;
       const root = rootRef.current;
       const headline = headlineRef.current;
+
+      // ---- MOBILE (§10): Community UNPINS to flow. Rule A headline blur-in kept; cards
+      // and chips rise ONCE on enter (staggered), chip labels scramble, illustrations draw
+      // in — all real-time one-shots (no scrub). Hover arrows are desktop-only (wired below).
+      if (opts?.mobile) {
+        if (!root || !headline) return;
+        const splits: SplitText[] = [];
+        splits.push(
+          blurIn(headline, { scrollTrigger: { trigger: root, start: "top 82%", once: true } }).split,
+        );
+        const cards = root.querySelectorAll<HTMLElement>("[data-community-card]");
+        rise(cards, {
+          stagger: stagger.cards,
+          scrollTrigger: { trigger: root, start: "top 78%", once: true },
+        });
+        const chips = root.querySelectorAll<HTMLElement>("[data-chip]");
+        rise(chips, {
+          stagger: stagger.rows,
+          scrollTrigger: { trigger: root, start: "top 70%", once: true },
+        });
+        const chipsTrigger = ScrollTrigger.create({
+          trigger: root,
+          start: "top 70%",
+          onEnter: () => chips.forEach((chip, i) => scramble(chip, { delay: i * 0.04 })),
+        });
+        root.querySelectorAll<SVGElement>("[data-illustration-slot] svg").forEach((svg) => {
+          drawIn(svg, { scrollTrigger: { trigger: root, start: "top 72%", once: true } });
+        });
+        return () => {
+          chipsTrigger.kill();
+          splits.forEach((s) => s.revert());
+        };
+      }
+
       if (!timeline || !pin || !root || !headline) return;
 
       const splits: SplitText[] = [];
@@ -105,13 +141,14 @@ export default function Community({
   return (
     <div
       ref={rootRef}
-      className="relative flex min-h-screen w-full flex-col justify-center px-8 py-16 text-[color:var(--fg)] motion-safe:md:h-screen motion-safe:md:min-h-0 motion-safe:md:overflow-hidden"
+      className="relative flex min-h-screen w-full flex-col justify-center px-8 py-16 text-[color:var(--fg)] desktop:h-screen desktop:min-h-0 desktop:overflow-hidden"
     >
       <div className="mx-auto flex w-full max-w-[1100px] flex-col gap-8">
         <header className="flex flex-col gap-3">
           <span className="label text-xs text-[color:var(--terracotta)]">{chapter.actLabel}</span>
           <h2
             ref={headlineRef}
+            data-rule-a
             className="font-[family-name:var(--font-display)] font-medium leading-[0.95] tracking-[-0.03em] text-[color:var(--fg)] text-[clamp(2.5rem,7vw,5.5rem)]"
           >
             <HeadlineText headline={community.headline} />

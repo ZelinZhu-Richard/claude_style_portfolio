@@ -208,7 +208,7 @@ function kNearest(
  * 1. Nebula — Gaussian ellipsoid σ(3.2, 1.8, 1.2)
  * ------------------------------------------------------------------ */
 
-function nebula(n: number, rng: () => number): FormationData {
+function nebula(n: number, rng: () => number, lineCap: number): FormationData {
   const d = makeData(n);
   const SX = 3.2;
   const SY = 1.8;
@@ -231,7 +231,7 @@ function nebula(n: number, rng: () => number): FormationData {
   // point to its 2 nearest subset neighbours within 0.9 and cap at ~180.
   const subset: number[] = [];
   for (let i = 0; i < n; i++) if (rng() < 0.1) subset.push(i);
-  const cap = scaled(180, n);
+  const cap = Math.min(scaled(180, n), lineCap);
   const edges = new EdgeList(n, cap);
   for (const a of subset) {
     const near = kNearest(d.positions, subset, a, 2, 0.9);
@@ -267,7 +267,7 @@ function roundBox(x: number, y: number, z: number, out: [number, number, number]
   }
 }
 
-function lattice(n: number, rng: () => number): FormationData {
+function lattice(n: number, rng: () => number, lineCap: number): FormationData {
   const d = makeData(n);
   const shellCount = scaled(2000, n);
   const innerCount = n - shellCount;
@@ -284,7 +284,7 @@ function lattice(n: number, rng: () => number): FormationData {
   const totalArea = faces.reduce((s, f) => s + f.w * f.h, 0);
   const half = [BOX.hx, BOX.hy, BOX.hz];
   const tmp: [number, number, number] = [0, 0, 0];
-  const edges = new EdgeList(n, scaled(4200, n));
+  const edges = new EdgeList(n, Math.min(scaled(4200, n), lineCap));
 
   let idx = 0;
   let placed = 0;
@@ -380,7 +380,7 @@ function randDir(rng: () => number): [number, number, number] {
  * 3. Community graph — 12 golden-angle clusters with hubs
  * ------------------------------------------------------------------ */
 
-function graph(n: number, rng: () => number): FormationData {
+function graph(n: number, rng: () => number, lineCap: number): FormationData {
   const d = makeData(n);
   const CLUSTERS = 12;
   const DISC_R = 3.4;
@@ -438,7 +438,7 @@ function graph(n: number, rng: () => number): FormationData {
   }
 
   // Edges (~3000 cap): hub↔hub (bright, first) → spokes → intra-cluster kNN.
-  const edges = new EdgeList(n, scaled(3000, n));
+  const edges = new EdgeList(n, Math.min(scaled(3000, n), lineCap));
   // hub → 2–3 nearest hubs, alpha 0.4
   const hubIdx = Array.from(hubOf);
   for (let c = 0; c < CLUSTERS; c++) {
@@ -487,7 +487,7 @@ export function moonCenter(
   out[2] = oz * Math.cos(o.incl);
 }
 
-function moons(n: number, rng: () => number): FormationData {
+function moons(n: number, rng: () => number, lineCap: number): FormationData {
   const d = makeData(n);
   const MOONS = 5;
   const moonPts = scaled(380, n);
@@ -507,7 +507,7 @@ function moons(n: number, rng: () => number): FormationData {
 
   const c0: [number, number, number] = [0, 0, 0];
   const capPerMoon = scaled(350, n);
-  const edges = new EdgeList(n, MOONS * capPerMoon); // capped 350/moon
+  const edges = new EdgeList(n, Math.min(MOONS * capPerMoon, lineCap)); // capped 350/moon
   let i = 0;
   for (let m = 0; m < MOONS; m++) {
     moonCenter(orbits[m], 0, 1, c0); // bake at t=0
@@ -627,13 +627,18 @@ function spark(n: number, rng: () => number): FormationData {
  * Build all five formations for N particles, indexed by `F` / FORMATION value.
  * Each formation draws from its own fresh PRNG stream (same SEED) so a formation's
  * layout is independent of how many formations were built before it.
+ *
+ * `edgeCap` (spec §10 mobile) hard-caps EACH formation's edge count. Because only one
+ * formation's lines are drawn at a time, capping every formation ≤ `edgeCap` keeps the
+ * scene at ≤ `edgeCap` segments (~1,200 on mobile). Omitted / `Infinity` on desktop, so
+ * the desktop buffers — and the determinism test — are byte-identical to before.
  */
-export function buildFormations(n: number): FormationData[] {
+export function buildFormations(n: number, edgeCap: number = Infinity): FormationData[] {
   const out: FormationData[] = [];
-  out[F.NEBULA] = nebula(n, mulberry32(SEED + 1));
-  out[F.LATTICE] = lattice(n, mulberry32(SEED + 2));
-  out[F.GRAPH] = graph(n, mulberry32(SEED + 3));
-  out[F.MOONS] = moons(n, mulberry32(SEED + 4));
+  out[F.NEBULA] = nebula(n, mulberry32(SEED + 1), edgeCap);
+  out[F.LATTICE] = lattice(n, mulberry32(SEED + 2), edgeCap);
+  out[F.GRAPH] = graph(n, mulberry32(SEED + 3), edgeCap);
+  out[F.MOONS] = moons(n, mulberry32(SEED + 4), edgeCap);
   out[F.CALM] = calm(n, mulberry32(SEED + 5));
   out[F.SPARK] = spark(n, mulberry32(SEED + 6));
   return out;

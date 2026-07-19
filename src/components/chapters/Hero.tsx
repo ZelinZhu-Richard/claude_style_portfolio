@@ -19,7 +19,7 @@ import { useImperativeHandle, useRef } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { SplitText } from "@/lib/effects/plugins";
-import { blurIn, rise, wordScrub } from "@/lib/effects";
+import { blurIn, rise, wordFadeIn, wordScrub } from "@/lib/effects";
 import { ease, stagger } from "@/lib/motion/tokens";
 import { onLoaderDone } from "@/lib/loader-signal";
 import { hero } from "@/content/chapters";
@@ -37,10 +37,36 @@ export default function Hero({ ref }: { ref?: React.Ref<ChapterHandle> }) {
   const ghostRef = useRef<HTMLParagraphElement>(null);
 
   useImperativeHandle(ref, () => ({
-    connect(timeline) {
-      const pin = timeline?.scrollTrigger;
+    connect(timeline, opts) {
       const name = nameRef.current;
       const tagline = taglineRef.current;
+
+      // ---- MOBILE (§10): Hero UNPINS to natural 100vh; load animation only. The
+      // name keeps its Rule-A blur-in (handed off from the loader), the tagline Rule B
+      // becomes a one-shot staggered word-fade on enter, and body/meta rise once. No
+      // scrubbed parallax, no "keep scrolling" blur loop (there is no pin to gate it).
+      if (opts?.mobile) {
+        if (!name || !tagline) return;
+        const nameReveal = blurIn(name, { paused: true });
+        const nameSplit = nameReveal.split;
+        const offLoader = onLoaderDone(() => nameReveal.tween.play());
+        const taglineSplit = wordFadeIn(tagline, {
+          scrollTrigger: { trigger: tagline, start: "top 92%", once: true },
+        });
+        if (fadeRef.current) {
+          rise(fadeRef.current.querySelectorAll("[data-hero-fade]"), {
+            stagger: stagger.rows,
+            scrollTrigger: { trigger: fadeRef.current, start: "top 92%", once: true },
+          });
+        }
+        return () => {
+          offLoader();
+          nameSplit.revert();
+          taglineSplit.revert();
+        };
+      }
+
+      const pin = timeline?.scrollTrigger;
       const ghost = ghostRef.current;
       if (!timeline || !pin || !name || !tagline || !ghost) return;
 
@@ -113,10 +139,11 @@ export default function Hero({ ref }: { ref?: React.Ref<ChapterHandle> }) {
   }));
 
   return (
-    <div className="relative flex min-h-screen w-full flex-col items-center justify-center gap-8 px-8 text-center motion-safe:md:h-screen motion-safe:md:min-h-0 motion-safe:md:overflow-hidden">
+    <div className="relative flex min-h-screen w-full flex-col items-center justify-center gap-8 px-8 text-center desktop:h-screen desktop:min-h-0 desktop:overflow-hidden">
       <div className="flex flex-col items-center gap-6">
         <h1
           ref={nameRef}
+          data-rule-a
           className="text-balance font-[family-name:var(--font-display)] font-medium uppercase leading-[0.95] tracking-normal text-[color:var(--fg)]"
           style={{ fontSize: "clamp(96px, 14vw, 220px)" }}
         >

@@ -23,6 +23,7 @@
 
 import { useImperativeHandle, useRef } from "react";
 import { blurIn, drawIn, rise } from "@/lib/effects";
+import { stagger } from "@/lib/motion/tokens";
 import { wireHoverArrows } from "@/lib/interactions";
 import { research } from "@/content/chapters";
 import type { ChapterDef } from "@/lib/scroll-map";
@@ -43,11 +44,35 @@ export default function Research({
   const headlineRef = useRef<HTMLHeadingElement>(null);
 
   useImperativeHandle(ref, () => ({
-    connect(timeline) {
+    connect(timeline, opts) {
       const pin = timeline?.scrollTrigger;
       const stage = stageRef.current;
       const flow = flowRef.current;
       const headline = headlineRef.current;
+
+      // ---- MOBILE (§10): Research UNPINS — both the stage and the index block flow. The
+      // headline keeps its Rule A blur-in; institutions rise ONCE on enter (staggered)
+      // instead of scrubbing; index rows already rise once per row on enter (shared below).
+      if (opts?.mobile) {
+        if (!stage || !flow || !headline) return;
+        const splits: SplitText[] = [];
+        splits.push(
+          blurIn(headline, { scrollTrigger: { trigger: stage, start: "top 82%", once: true } }).split,
+        );
+        const institutions = stage.querySelectorAll<HTMLElement>("[data-institution]");
+        rise(institutions, {
+          stagger: stagger.rows,
+          scrollTrigger: { trigger: stage, start: "top 75%", once: true },
+        });
+        const illo = stage.querySelector<SVGElement>("[data-research-illo]");
+        if (illo) drawIn(illo, { scrollTrigger: { trigger: stage, start: "top 70%", once: true } });
+        const rows = flow.querySelectorAll<HTMLElement>("[data-project-row]");
+        rows.forEach((row) => {
+          rise(row, { scrollTrigger: { trigger: row, start: "top 88%", once: true } });
+        });
+        return () => splits.forEach((s) => s.revert());
+      }
+
       if (!timeline || !pin || !stage || !flow || !headline) return;
 
       const splits: SplitText[] = [];
@@ -96,7 +121,7 @@ export default function Research({
       <div
         ref={stageRef}
         data-pin-stage
-        className="relative flex min-h-screen w-full flex-col justify-center px-8 py-16 text-[color:var(--fg)] motion-safe:md:h-screen motion-safe:md:min-h-0 motion-safe:md:overflow-hidden"
+        className="relative flex min-h-screen w-full flex-col justify-center px-8 py-16 text-[color:var(--fg)] desktop:h-screen desktop:min-h-0 desktop:overflow-hidden"
       >
         {/* ⑥ winding milestone path — right-gutter margin illustration (xl+ so it stays
             in the gutter without shifting the footprint). Verified headlessly at
@@ -112,6 +137,7 @@ export default function Research({
             </span>
             <h2
               ref={headlineRef}
+              data-rule-a
               className="font-[family-name:var(--font-display)] font-medium leading-[0.95] tracking-[-0.03em] text-[color:var(--fg)] text-[clamp(2.5rem,7vw,5.5rem)]"
             >
               <HeadlineText headline={research.headline} />
@@ -148,11 +174,14 @@ export default function Research({
         </div>
       </div>
 
-      {/* NATURAL-FLOW block — exactly 100vh; the index rows scroll normally here. */}
+      {/* NATURAL-FLOW block — exactly 100vh; the index rows scroll normally here. On
+          desktop it is `md:h-screen` (a fixed 100vh viewport), so the rows are clamped
+          with `md:overflow-hidden` — a guard so a tall index can never spill into the
+          Honors band below (deferred a11y/robustness item). Mobile flows naturally. */}
       <div
         ref={flowRef}
         data-research-flow
-        className="relative flex w-full flex-col justify-center px-8 py-16 text-[color:var(--fg)] motion-safe:md:h-screen"
+        className="relative flex w-full flex-col justify-center px-8 py-16 text-[color:var(--fg)] desktop:h-screen desktop:overflow-hidden"
       >
         <ul className="mx-auto flex w-full max-w-[1100px] flex-col">
           {research.index.map((row, i) => {

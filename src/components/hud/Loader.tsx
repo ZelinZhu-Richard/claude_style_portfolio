@@ -37,6 +37,7 @@ import { SplitText } from "@/lib/effects/plugins";
 import { drawIn } from "@/lib/effects";
 import { ease } from "@/lib/motion/tokens";
 import { fireLoaderDone } from "@/lib/loader-signal";
+import { isMobile } from "@/lib/interactions";
 import { NodeBlossom } from "@/components/illustrations";
 
 const KEY = "z-loader-seen";
@@ -72,7 +73,12 @@ export default function Loader() {
       /* ignore */
     }
     setDims({ w: window.innerWidth, h: window.innerHeight });
-    setPhase(window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "reduced" : "play");
+    // Reduced-motion (§9) AND mobile (§10) both take the short ≤0.8s fade with NO scroll
+    // lock — the full ~2.4s pinned sequence is a desktop-only entrance. `isMobile()` unifies
+    // detection with ScrollStory / Scene (coarse pointer OR <768px).
+    const shortFade =
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches || isMobile();
+    setPhase(shortFade ? "reduced" : "play");
   }, []);
 
   useGSAP(

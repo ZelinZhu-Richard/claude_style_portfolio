@@ -24,6 +24,7 @@ uniform float uProgress;
 uniform float uTime;
 uniform float uNoiseAmp;
 uniform float uCalm;
+uniform float uMobile;
 uniform float uPixelRatio;
 uniform float uSizeScale;
 uniform float uSpark;
@@ -41,12 +42,21 @@ vec3 curlish(vec3 p, float t){
   );
 }
 
+// Mobile (§10): a cheap per-particle sine sway that replaces the curl-noise drift.
+// Phase is keyed to aStagger so each particle sways independently (a "precomputed" feel)
+// without the curl field's extra trig — kinder to a mobile GPU, same visual family.
+vec3 sway(float t, float ph){
+  return vec3(sin(t * 0.6 + ph), cos(t * 0.5 + ph), sin(t * 0.4 + ph));
+}
+
 void main() {
   float m = smoothstep(0.0, 1.0, clamp((uProgress - aStagger * 0.35) / 0.65, 0.0, 1.0));
   vec3 pos = mix(aStart, aTarget, m);
 
-  // Nebula curl drift (suppressed in calm) + calm y-sine sway (spec §7 f1/f5).
-  pos += curlish(pos * 0.4, uTime * 0.35) * uNoiseAmp * (1.0 - uCalm);
+  // Nebula drift (suppressed in calm): curl noise on desktop, sine sway on mobile
+  // (spec §7 f1 / §10). Plus the calm y-sine sway (spec §7 f5).
+  vec3 drift = mix(curlish(pos * 0.4, uTime * 0.35), sway(uTime, aStagger * 6.2831), uMobile);
+  pos += drift * uNoiseAmp * (1.0 - uCalm);
   pos.y += sin(uTime * 1.047 + aStagger * 6.2831) * 0.08 * uCalm;
 
   // Easter-egg spark blend (Task 6 / spec §8): a top layer over the scroll morph, so

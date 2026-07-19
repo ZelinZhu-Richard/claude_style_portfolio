@@ -36,9 +36,14 @@ export default function Honors({ ref }: { ref?: React.Ref<ChapterHandle> }) {
   const rootRef = useRef<HTMLDivElement>(null);
 
   useImperativeHandle(ref, () => ({
-    connect() {
+    connect(_timeline, opts) {
       const root = rootRef.current;
       if (!root) return;
+      // §10 mobile: the marquee drifts at a CONSTANT speed (no velocity coupling — that
+      // idiom depends on wheel/scroll velocity a touch device doesn't provide well and
+      // "feels broken"). Desktop keeps the velocity-coupled timeScale (§6 ch6).
+      const mobile = opts?.mobile === true;
+
       // Rule C — the outlined items rise once as the band enters (one-shot, staggered).
       const items = root.querySelectorAll<HTMLElement>("[data-honor]");
       rise(items, {
@@ -46,10 +51,10 @@ export default function Honors({ ref }: { ref?: React.Ref<ChapterHandle> }) {
         scrollTrigger: { trigger: root, start: "top 80%", once: true },
       });
 
-      // ---- Velocity-coupled marquee (§6 ch6) ----
-      // connect runs ONLY in ScrollStory's desktop matchMedia context, so this motion
-      // is desktop-only by construction; under reduced-motion / mobile the band stays
-      // the statically-readable wrapped list (both sequences already in the DOM).
+      // ---- Marquee loops (§6 ch6) ----
+      // connect runs in the desktop OR mobile motion-safe context; under reduced-motion
+      // it is never called, so the band stays the statically-readable wrapped list (both
+      // sequences already in the DOM).
       const scrollers = gsap.utils.toArray<HTMLElement>(root.querySelectorAll("[data-marquee-scroller]"));
       const loops: gsap.core.Tween[] = [];
       scrollers.forEach((scroller, rowIndex) => {
@@ -74,6 +79,11 @@ export default function Honors({ ref }: { ref?: React.Ref<ChapterHandle> }) {
           }),
         );
       });
+
+      // Mobile: constant drift only — no velocity ticker.
+      if (mobile) {
+        return () => loops.forEach((tw) => tw.kill());
+      }
 
       // Shared timeScale: base 1, pushed by scroll velocity (clamped ±4), relaxing to
       // 1 at ~0.05/frame. A negative timeScale reverses BOTH rows, so they keep
@@ -106,35 +116,49 @@ export default function Honors({ ref }: { ref?: React.Ref<ChapterHandle> }) {
       ref={rootRef}
       className="relative flex min-h-screen w-full flex-col justify-center gap-10 overflow-hidden py-16 text-[color:var(--fg)]"
     >
-      <p className="label px-8 text-xs text-[color:var(--fg)] opacity-60">{honors.label}</p>
+      {/* Real heading + list for assistive tech (the visual marquee is a decorative,
+          duplicated, animated band — announced once, in order, via this sr-only list).
+          The enclosing ScrollStory <section aria-label="Honors"> is the landmark. */}
+      <h2 className="sr-only">Honors</h2>
+      <ul className="sr-only">
+        {honors.items.map((item) => (
+          <li key={item}>{item}</li>
+        ))}
+      </ul>
 
-      {ROWS.map((rowItems, rowIndex) => (
-        // Marquee row: overflow-hidden viewport wrapping the scroller. Task 5 animates
-        // `[data-marquee-scroller]`'s x (base 40px/s; the two rows counter-scroll; the
-        // timeScale couples to scroll velocity). Static here — no transform yet.
-        <div key={rowIndex} className="w-full overflow-hidden">
-          <div
-            data-marquee-scroller
-            data-row={rowIndex}
-            className="flex w-max items-center gap-x-10 whitespace-nowrap will-change-transform"
-          >
-            {/* Two copies of the sequence for a seamless loop; the duplicate is hidden
-                from assistive tech so items are not announced twice. */}
-            {[false, true].map((isDuplicate) =>
-              rowItems.map((item, i) => (
-                <span
-                  key={`${isDuplicate ? "dup" : "primary"}-${i}`}
-                  data-honor
-                  aria-hidden={isDuplicate ? "true" : undefined}
-                  className="text-outline font-[family-name:var(--font-display)] font-medium uppercase leading-none tracking-[-0.02em] text-[clamp(2.5rem,7vw,5.5rem)]"
-                >
-                  {item}
-                </span>
-              )),
-            )}
+      <p aria-hidden="true" className="label px-8 text-xs text-[color:var(--fg)] opacity-60">
+        {honors.label}
+      </p>
+
+      {/* The moving band as a whole is hidden from AT (the sr-only list above carries the
+          content); every span is presentational. */}
+      <div aria-hidden="true" className="contents">
+        {ROWS.map((rowItems, rowIndex) => (
+          // Marquee row: overflow-hidden viewport wrapping the scroller. connect animates
+          // `[data-marquee-scroller]`'s x (base 40px/s; the two rows counter-scroll;
+          // desktop couples timeScale to scroll velocity, mobile drifts at constant speed).
+          <div key={rowIndex} className="w-full overflow-hidden">
+            <div
+              data-marquee-scroller
+              data-row={rowIndex}
+              className="flex w-max items-center gap-x-10 whitespace-nowrap will-change-transform"
+            >
+              {/* Two copies of the sequence for a seamless loop. */}
+              {[false, true].map((isDuplicate) =>
+                rowItems.map((item, i) => (
+                  <span
+                    key={`${isDuplicate ? "dup" : "primary"}-${i}`}
+                    data-honor
+                    className="text-outline font-[family-name:var(--font-display)] font-medium uppercase leading-none tracking-[-0.02em] text-[clamp(2.5rem,7vw,5.5rem)]"
+                  >
+                    {item}
+                  </span>
+                )),
+              )}
+            </div>
           </div>
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
   );
 }

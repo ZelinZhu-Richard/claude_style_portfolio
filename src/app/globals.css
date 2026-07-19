@@ -1,6 +1,16 @@
 @import "tailwindcss";
 
 /*
+ * `desktop:` custom variant (Task 7) — matches ScrollStory's DESKTOP matchMedia context
+ * EXACTLY: fine-pointer viewports ≥768px with motion allowed. Used for the pinned-viewport
+ * sizing (`h-screen` / `overflow-hidden`) on chapters that UNPIN on mobile (Hero, About,
+ * Community, Research), so that sizing engages only where the desktop pins run — never on a
+ * coarse tablet ≥768px (which is MOBILE and flows). Safety keeps `motion-safe:` gating
+ * because it pins in BOTH desktop and mobile. This pairing is what closes the 768px seam.
+ */
+@custom-variant desktop (@media (min-width: 768px) and (not (pointer: coarse)) and (prefers-reduced-motion: no-preference));
+
+/*
  * Palette (spec §4 "Design system"). `--bg`/`--fg` are the theme-flip pair
  * GSAP tweens directly (as CSS custom properties) to crossfade the page
  * between the cream acts and the AI-safety dark act — everything else here
@@ -185,4 +195,35 @@ body {
 .hud--center {
   left: 50%;
   transform: translateX(-50%);
+}
+
+/*
+ * Short-viewport compaction (Task 7, deferred item #2). On desktop the About + Community
+ * stages are pinned `h-screen` with `overflow-hidden`; on a short viewport (<~800px tall,
+ * e.g. 1440×720) their stacked content — headline, paragraph/cards, stat grid, chips —
+ * can exceed the fixed 100vh and clip. Tighten the section padding, the content-column
+ * gaps and the headline scale so everything fits. Harmless on the flowing mobile/reduced
+ * layouts (it only tightens spacing there). The `#id > div` specificity beats the utility
+ * classes it overrides.
+ */
+@media (max-height: 800px) {
+  #chapter-about > div,
+  #chapter-community > div,
+  #chapter-safety > div {
+    padding-top: clamp(1.25rem, 4.5vh, 3rem);
+    padding-bottom: clamp(1.25rem, 4.5vh, 3rem);
+  }
+  #chapter-about > div > div,
+  #chapter-community > div > div {
+    gap: clamp(0.75rem, 2.4vh, 1.5rem);
+  }
+  #chapter-about [data-rule-a],
+  #chapter-community [data-rule-a],
+  #chapter-safety [data-rule-a] {
+    font-size: clamp(2rem, 5.2vw, 3.75rem);
+    line-height: 1;
+  }
+  #chapter-about ul {
+    gap: 0.75rem 2rem;
+  }
 }

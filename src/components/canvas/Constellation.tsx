@@ -110,8 +110,8 @@ interface Engine {
   dispose: () => void;
 }
 
-function buildEngine(N: number, reduced: boolean): Engine {
-  const formations = buildFormations(N);
+function buildEngine(N: number, reduced: boolean, mobile: boolean, lineCap: number): Engine {
+  const formations = buildFormations(N, lineCap);
   const init = formations[F.NEBULA]; // scrollState starts at NEBULA→NEBULA
 
   const aStart = new Float32Array(init.positions);
@@ -153,6 +153,7 @@ function buildEngine(N: number, reduced: boolean): Engine {
       uTime: { value: 0 },
       uNoiseAmp: { value: reduced ? 0 : scrollState.noiseAmp },
       uCalm: { value: 0 },
+      uMobile: { value: mobile ? 1 : 0 }, // §10: sine sway instead of curl noise
       uPixelRatio: { value: 1 },
       uSizeScale: { value: 19 },
       uSpark: { value: 0 },
@@ -281,8 +282,21 @@ function buildEngine(N: number, reduced: boolean): Engine {
   };
 }
 
-export default function Constellation({ count, reduced }: { count: number; reduced: boolean }) {
-  const engine = useMemo(() => buildEngine(count, reduced), [count, reduced]);
+export default function Constellation({
+  count,
+  reduced,
+  mobile = false,
+  lineCap,
+}: {
+  count: number;
+  reduced: boolean;
+  mobile?: boolean;
+  lineCap?: number;
+}) {
+  const engine = useMemo(
+    () => buildEngine(count, reduced, mobile, lineCap ?? Infinity),
+    [count, reduced, mobile, lineCap],
+  );
   const { gl } = useThree();
 
   // Initialise the line buffers/uniforms for the mounted NEBULA formation.
@@ -466,8 +480,17 @@ export default function Constellation({ count, reduced }: { count: number; reduc
         : from === F.LATTICE
           ? 1 - s.progress
           : 0;
-    s.spinRate = THREE.MathUtils.damp(s.spinRate, latticeActive * 0.02, 2, dt);
-    e.group.rotation.y += s.spinRate * dt;
+    if (latticeActive > 0.001) {
+      // Inside / entering / leaving Safety: spin the shielded lattice at up to 0.02 rad/s.
+      s.spinRate = THREE.MathUtils.damp(s.spinRate, latticeActive * 0.02, 2, dt);
+      e.group.rotation.y += s.spinRate * dt;
+    } else {
+      // Outside Safety: the accumulated tilt must NOT persist (it would leave every later
+      // formation rotated). Stop spinning and DECAY the accrued rotation back toward 0
+      // (deferred fix — the spin previously only zeroed its rate, never its angle).
+      s.spinRate = 0;
+      e.group.rotation.y = THREE.MathUtils.damp(e.group.rotation.y, 0, 1.5, dt);
+    }
 
     // ---------- camera dolly + pointer parallax ----------
     const camZTarget = CAMERA_Z[Math.min(Math.max(scrollState.chapter, 0), 7)];

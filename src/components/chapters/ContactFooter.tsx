@@ -113,7 +113,8 @@ export default function ContactFooter({ ref }: { ref?: React.Ref<ChapterHandle> 
   return (
     <footer
       ref={rootRef}
-      className="sticky bottom-0 flex min-h-screen w-full flex-col justify-center gap-8 bg-[color:var(--terracotta)] px-8 py-16 motion-safe:md:h-screen"
+      role="contentinfo"
+      className="sticky bottom-0 flex min-h-screen w-full flex-col justify-center gap-8 bg-[color:var(--terracotta)] px-8 py-16 desktop:h-screen"
     >
       {/* ⑦ paper plane — cream line-work in the right margin near the CTA (absolute →
           no layout shift; lg-only so it never crowds the copy). */}
@@ -126,6 +127,7 @@ export default function ContactFooter({ ref }: { ref?: React.Ref<ChapterHandle> 
         <div className="flex flex-col gap-4">
           <h2
             ref={headlineRef}
+            data-rule-a
             className="font-[family-name:var(--font-display)] font-medium leading-[0.95] tracking-[-0.03em] text-[color:var(--paper)] text-[clamp(2.5rem,8vw,6rem)]"
           >
             <HeadlineText headline={contact.headline} />

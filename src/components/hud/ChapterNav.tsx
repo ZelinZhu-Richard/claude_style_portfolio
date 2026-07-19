@@ -116,7 +116,7 @@ export default function ChapterNav() {
         ref={listRef}
         className={`${
           open ? "flex" : "hidden"
-        } md:flex relative flex-col md:flex-row gap-1 md:gap-1 mt-2 md:mt-0 items-stretch md:items-center rounded-[var(--radius-pill)] md:border md:border-[color:var(--hairline)] md:bg-[color:var(--bg)] md:px-1.5 md:py-1`}
+        } md:flex relative flex-col md:flex-row gap-1 md:gap-1 mt-2 md:mt-0 items-stretch md:items-center rounded-[var(--radius-card)] md:rounded-[var(--radius-pill)] border border-[color:var(--hairline)] bg-[color:var(--bg)] px-3 py-3 md:px-1.5 md:py-1 text-center`}
       >
         {/* Sliding capsule — behind the items (z-0); the effect positions/animates it. */}
         <span

@@ -13,17 +13,26 @@
 import { useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import { PARTICLES, PARTICLES_MOBILE } from "@/lib/formations";
+import { isMobile } from "@/lib/interactions";
 import GradientBackdrop from "./GradientBackdrop";
 import Constellation from "./Constellation";
 
+// §10 mobile constellation line cap (~1,200 segments total). Enforced at buffer build
+// (formations.buildFormations edgeCap) so the mobile lattice/graph never exceed it.
+const MOBILE_LINE_CAP = 1200;
+
 export default function Scene({ onContextLost }: { onContextLost?: () => void }) {
-  // Read the environment once at mount (client-only — this module never SSRs).
+  // Read the environment once at mount (client-only — this module never SSRs). Detection
+  // matches ScrollStory's MOBILE context (coarse pointer OR <768px), fixing the previous
+  // width-only check (§10 detection unification).
   const [env] = useState(() => {
-    const mobile = window.matchMedia("(max-width: 768px)").matches;
+    const mobile = isMobile();
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     return {
       count: mobile ? PARTICLES_MOBILE : PARTICLES,
       dprMax: mobile ? 1.5 : 1.75, // §11: dpr [1,1.75], ≤1.5 mobile
+      lineCap: mobile ? MOBILE_LINE_CAP : undefined, // §10 mobile line cap
+      mobile,
       reduced,
     };
   });
@@ -42,7 +51,7 @@ export default function Scene({ onContextLost }: { onContextLost?: () => void })
       }}
     >
       <GradientBackdrop />
-      <Constellation count={env.count} reduced={env.reduced} />
+      <Constellation count={env.count} reduced={env.reduced} mobile={env.mobile} lineCap={env.lineCap} />
     </Canvas>
   );
 }

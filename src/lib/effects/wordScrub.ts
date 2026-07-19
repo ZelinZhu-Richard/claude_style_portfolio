@@ -16,6 +16,8 @@
  */
 
 import { gsap } from "gsap";
+import type { ScrollTrigger } from "gsap/ScrollTrigger";
+import { ease, duration, stagger } from "@/lib/motion/tokens";
 import { SplitText } from "./plugins";
 
 export interface WordScrubOptions {
@@ -25,6 +27,35 @@ export interface WordScrubOptions {
   end?: number;
   /** Dim starting opacity (spec: 0.15). */
   from?: number;
+}
+
+export interface WordFadeOptions {
+  /** Fire on scroll (one-shot; use `once: true`) instead of on creation. */
+  scrollTrigger?: ScrollTrigger.Vars;
+  /** Per-word stagger (default `stagger.words` = 0.05). */
+  stagger?: number;
+  /** Dim starting opacity the words fade UP from (spec: 0.15). */
+  from?: number;
+}
+
+/**
+ * Rule B for MOBILE (spec §10): the same word-by-word reveal, but as a ONE-SHOT
+ * staggered fade on enter instead of a scroll scrub — "scrub on touch feels broken".
+ * Words fade `from → 1` (default 0.15 → 1, matching the scrub's dim start) with the
+ * §9 words stagger and a reveal-duration ease, played once when the trigger enters.
+ *
+ * Returns the SplitText so the caller can revert it on teardown, exactly like `wordScrub`.
+ */
+export function wordFadeIn(target: Element, opts: WordFadeOptions = {}): SplitText {
+  const split = new SplitText(target, { type: "words", aria: "auto" });
+  gsap.from(split.words, {
+    opacity: opts.from ?? 0.15,
+    duration: duration.reveal,
+    ease: ease.reveal,
+    stagger: opts.stagger ?? stagger.words,
+    scrollTrigger: opts.scrollTrigger,
+  });
+  return split;
 }
 
 export function wordScrub(
