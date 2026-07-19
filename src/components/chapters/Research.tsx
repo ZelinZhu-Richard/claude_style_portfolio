@@ -175,9 +175,10 @@ export default function Research({
       </div>
 
       {/* NATURAL-FLOW block — exactly 100vh; the index rows scroll normally here. On
-          desktop it is `md:h-screen` (a fixed 100vh viewport), so the rows are clamped
-          with `md:overflow-hidden` — a guard so a tall index can never spill into the
-          Honors band below (deferred a11y/robustness item). Mobile flows naturally. */}
+          desktop it is `desktop:h-screen` (a fixed 100vh viewport), so the rows are
+          clamped with `desktop:overflow-hidden` — a guard so a tall index can never
+          spill into the Honors band below (deferred a11y/robustness item). Mobile
+          flows naturally. */}
       <div
         ref={flowRef}
         data-research-flow

@@ -6,7 +6,8 @@
  * ScrollTriggers WRITE fields here inside their `onUpdate` callbacks; Task 4's
  * `useFrame` READS them every render. This deliberately bypasses React so the
  * constellation can follow scroll at 60fps with ZERO React re-renders. Discrete,
- * ~4-per-scroll chapter changes go through zustand instead (a later task) — this
+ * ~4-per-scroll chapter changes go through the gsap ticker calling `setState` in
+ * `ChapterNav` instead (a normal React re-render, since they're infrequent) — this
  * module is only for the continuous, per-frame values.
  *
  * Pure & SSR-safe: no `window`/`document` access at import time, no side effects.

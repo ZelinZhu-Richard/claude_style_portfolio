@@ -113,7 +113,6 @@ export default function ContactFooter({ ref }: { ref?: React.Ref<ChapterHandle> 
   return (
     <footer
       ref={rootRef}
-      role="contentinfo"
       className="sticky bottom-0 flex min-h-screen w-full flex-col justify-center gap-8 bg-[color:var(--terracotta)] px-8 py-16 desktop:h-screen"
     >
       {/* ⑦ paper plane — cream line-work in the right margin near the CTA (absolute →

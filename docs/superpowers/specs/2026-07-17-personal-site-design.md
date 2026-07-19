@@ -188,3 +188,14 @@ Title `Zelin (Richard) Zhu — AI Safety Builder & Researcher`. Description (no 
 | Font-load pin mis-measurement | fonts.ready → ScrollTrigger.refresh() |
 | Low-end mobile GPU | Particle/DPR downshift via matchMedia; context-loss unmount fallback |
 | Next 15 on security-maintenance | Pin ^15.5 (patches auto-apply); plan Next 16 codemod later |
+
+## Implementation deviations (recorded post-review)
+
+- **§6 ch6 marquee**: spec called for "drag-to-scrub with inertia"; shipped hover-fill +
+  velocity coupling instead (no drag-to-scrub). Not implemented as specified.
+- **§6 ch3**: spec called for the camera orbiting 30° azimuth; implemented as the
+  lattice group doing an idle spin rather than an actual camera orbit. Visually
+  adjacent to the spec'd effect; approved in task review.
+- **Responsive — About**: flows naturally on mobile instead of using a 120vh pin (accepted deviation).
+- **Responsive — reduced motion**: the constellation snaps between formations rather than
+  opacity-crossfading between them under `prefers-reduced-motion` (accepted deviation).

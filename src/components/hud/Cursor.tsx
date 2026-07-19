@@ -176,6 +176,7 @@ export default function Cursor() {
           borderColor: "var(--fg)",
           transition: "border-color 0.2s linear",
           willChange: "transform",
+          opacity: 0,
         }}
       >
         <span
@@ -189,7 +190,7 @@ export default function Cursor() {
       <div
         ref={dotRef}
         className="absolute left-0 top-0 rounded-full bg-[color:var(--fg)]"
-        style={{ width: 8, height: 8, willChange: "transform" }}
+        style={{ width: 8, height: 8, willChange: "transform", opacity: 0 }}
       />
     </div>
   );
