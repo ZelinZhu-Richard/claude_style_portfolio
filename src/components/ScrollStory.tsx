@@ -73,13 +73,21 @@ const DARK: ThemeColors = { bg: palette.ink, fg: palette.creamGhost };
 // variant defined in globals.css, so the desktop-only pinned-viewport CSS engages exactly
 // where the desktop JS context does. Safety's beat-swap gating is `motion-safe:` (both
 // DESKTOP and MOBILE call `connect`, so it is revealed in both; REDUCED never hides it).
+//
+// MOBILE's width term is `not (min-width: 768px)` — the EXACT complement of DESKTOP's
+// `min-width: 768px`, NOT `max-width: 767px`. `max-width:767` and `min-width:768` leave the
+// open interval (767px, 768px) — reachable at fractional CSS widths via browser zoom /
+// fractional DPR — matching NEITHER context, so no `connect()` fires and Safety's
+// motion-safe-hidden beats stay invisible (the exact seam this task eliminates). `not
+// (min-width:768px)` ≡ `width < 768px` is total: every width is either <768 (→MOBILE) or
+// ≥768 (→DESKTOP), with 768.0 owned by DESKTOP. (MQ Level 4 `not`; verified in Chromium.)
 // Exhaustiveness for no-preference: coarse→MOBILE, fine/none ≥768→DESKTOP, anything
 // <768→MOBILE; DESKTOP requires not-coarse, so a coarse device ≥768 is MOBILE, never both.
 const REDUCED = "(prefers-reduced-motion: reduce)";
 const DESKTOP =
   "(min-width: 768px) and (not (pointer: coarse)) and (prefers-reduced-motion: no-preference)";
 const MOBILE =
-  "(prefers-reduced-motion: no-preference) and (max-width: 767px), (prefers-reduced-motion: no-preference) and (pointer: coarse)";
+  "(prefers-reduced-motion: no-preference) and (not (min-width: 768px)), (prefers-reduced-motion: no-preference) and (pointer: coarse)";
 
 // §10 mobile scroll budgets (vh). Hero unpins (natural 100vh, load animation only);
 // About + Community + Research + Honors + Contact flow at natural height; ONLY Safety

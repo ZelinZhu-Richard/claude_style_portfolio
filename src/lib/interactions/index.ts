@@ -21,11 +21,12 @@ export function polishEnabled(): boolean {
  * Mobile detection (spec §10): coarse pointer OR a narrow viewport. Shared by every gate
  * that must agree with ScrollStory's MOBILE matchMedia context (Scene particle/DPR
  * downshift + line cap, Loader short-fade) so the whole app treats a device the same way.
- * The width breakpoint is `max-width:767px` — the exact complement of DESKTOP's
- * `min-width:768px` — so 768px fine-pointer is desktop everywhere and there is no seam.
- * (Polish gates use `POLISH_QUERY`, which already excludes coarse via `pointer:fine`.)
+ * The width term is `not (min-width: 768px)` — the EXACT complement of DESKTOP's
+ * `min-width:768px` (NOT `max-width:767px`, which would leave the fractional-width gap
+ * (767px,768px) matching neither). So 768px fine-pointer is desktop everywhere and there
+ * is no seam. (Polish gates use `POLISH_QUERY`, which already excludes coarse via `pointer:fine`.)
  */
-export const MOBILE_QUERY = "(max-width: 767px), (pointer: coarse)";
+export const MOBILE_QUERY = "(not (min-width: 768px)), (pointer: coarse)";
 
 /** True only in the browser when the device is mobile per `MOBILE_QUERY`. SSR-safe. */
 export function isMobile(): boolean {
