@@ -21,8 +21,8 @@
  * provider, so no module-level singleton is needed.
  */
 
-import { useEffect, useRef } from "react";
-import { ReactLenis, type LenisRef } from "lenis/react";
+import { useEffect } from "react";
+import { ReactLenis, useLenis } from "lenis/react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
@@ -33,11 +33,25 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 // reads `window.innerWidth` unguarded and would crash if registered here at SSR time.
 gsap.registerPlugin(ScrollTrigger);
 
-export default function SmoothScroll({ children }: { children: React.ReactNode }) {
-  const lenisRef = useRef<LenisRef>(null);
+/**
+ * Bridges the root Lenis instance to GSAP's ticker. Must render INSIDE
+ * <ReactLenis> so `useLenis()` re-fires the effect once the instance exists.
+ *
+ * Why not read `lenisRef.current?.lenis` in a parent `useEffect(..., [])`?
+ * ReactLenis creates its instance in a child useEffect and exposes it on the
+ * ref via `useImperativeHandle(..., [lenis])` where `lenis` is React STATE —
+ * the handle only carries the instance after the setLenis re-render commits,
+ * which is AFTER the parent's initial effects pass. An empty-dep parent effect
+ * therefore reads `undefined` exactly once and never retries, leaving Lenis
+ * mounted (intercepting wheel/touch) but with no raf heartbeat: wheel and
+ * touchpad scrolling freeze while keyboard scrolling (native, un-intercepted)
+ * still works. `useLenis()` subscribes to the context state instead, so this
+ * effect runs precisely when the instance becomes available.
+ */
+function LenisGsapBridge() {
+  const lenis = useLenis();
 
   useEffect(() => {
-    const lenis = lenisRef.current?.lenis;
     if (!lenis) return;
 
     // GSAP ticker is the single clock; feed its (seconds) time to Lenis (ms).
@@ -53,10 +67,15 @@ export default function SmoothScroll({ children }: { children: React.ReactNode }
       lenis.off("scroll", ScrollTrigger.update);
       gsap.ticker.remove(update);
     };
-  }, []);
+  }, [lenis]);
 
+  return null;
+}
+
+export default function SmoothScroll({ children }: { children: React.ReactNode }) {
   return (
-    <ReactLenis root options={{ lerp: 0.09, autoRaf: false }} ref={lenisRef}>
+    <ReactLenis root options={{ lerp: 0.09, autoRaf: false }}>
+      <LenisGsapBridge />
       {children}
     </ReactLenis>
   );
