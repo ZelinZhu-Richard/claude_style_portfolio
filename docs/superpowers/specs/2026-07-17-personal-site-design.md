@@ -199,3 +199,13 @@ Title `Zelin (Richard) Zhu — AI Safety Builder & Researcher`. Description (no 
 - **Responsive — About**: flows naturally on mobile instead of using a 120vh pin (accepted deviation).
 - **Responsive — reduced motion**: the constellation snaps between formations rather than
   opacity-crossfading between them under `prefers-reduced-motion` (accepted deviation).
+- **§8 cursor**: replaced the spec'd 8px ink dot + 28px trailing ring with the Claude Code
+  mascot (vector pixel-art, `components/hud/CursorMascot.tsx`), at the owner's request. It
+  follows the pointer instantly and carries state through scale (idle 1× · hover 1.2× ·
+  magnetic 1.35×), squashing to 0.85 with happy chevron eyes while the pointer is held.
+  Two ring behaviours are consequently dropped: the `→` glyph over `[data-marquee-scroller]`
+  (now just the hover scale) and the ring morphing to `[data-magnetic]` bounds (now a
+  larger scale — the magnetic pull on the button itself is unchanged). Source artwork the
+  mascot was traced from lives in `docs/assets/cursor-reference/`; it could not be shipped
+  directly because both files have opaque backgrounds (the .png's transparency checkerboard
+  is baked into its pixels).
